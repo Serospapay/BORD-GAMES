@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BoardGamesLibrary.Games\BoardGamesLibrary.Games.csproj" />
+    <ProjectReference Include="..\BoardGamesLibrary.Core\BoardGamesLibrary.Core.csproj" />
+    <ProjectReference Include="..\BoardGamesLibrary.Logging\BoardGamesLibrary.Logging.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

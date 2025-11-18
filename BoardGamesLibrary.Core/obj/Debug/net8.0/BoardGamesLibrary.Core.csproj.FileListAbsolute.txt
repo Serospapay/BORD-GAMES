@@ -1,0 +1,11 @@
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\bin\Debug\net8.0\BoardGamesLibrary.Core.deps.json
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\bin\Debug\net8.0\BoardGamesLibrary.Core.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\bin\Debug\net8.0\BoardGamesLibrary.Core.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\BoardGamesLibrary.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\BoardGamesLibrary.Core.AssemblyInfoInputs.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\BoardGamesLibrary.Core.AssemblyInfo.cs
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\BoardGamesLibrary.Core.csproj.CoreCompileInputs.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\BoardGamesLibrary.Core.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\refint\BoardGamesLibrary.Core.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\BoardGamesLibrary.Core.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Core\obj\Debug\net8.0\ref\BoardGamesLibrary.Core.dll

@@ -1,0 +1,71 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "BoardGamesLibrary.UI/1.0.0": {
+        "dependencies": {
+          "BoardGamesLibrary.Core": "1.0.0",
+          "BoardGamesLibrary.Games": "1.0.0",
+          "BoardGamesLibrary.Logging": "1.0.0"
+        },
+        "runtime": {
+          "BoardGamesLibrary.UI.dll": {}
+        }
+      },
+      "BoardGamesLibrary.Core/1.0.0": {
+        "runtime": {
+          "BoardGamesLibrary.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "BoardGamesLibrary.Games/1.0.0": {
+        "dependencies": {
+          "BoardGamesLibrary.Core": "1.0.0",
+          "BoardGamesLibrary.Logging": "1.0.0"
+        },
+        "runtime": {
+          "BoardGamesLibrary.Games.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "BoardGamesLibrary.Logging/1.0.0": {
+        "runtime": {
+          "BoardGamesLibrary.Logging.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BoardGamesLibrary.UI/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BoardGamesLibrary.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BoardGamesLibrary.Games/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BoardGamesLibrary.Logging/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -1,0 +1,17 @@
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Games.deps.json
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Games.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Games.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Core.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Logging.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Core.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\bin\Debug\net8.0\BoardGamesLibrary.Logging.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.csproj.AssemblyReference.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.AssemblyInfoInputs.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.AssemblyInfo.cs
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.csproj.CoreCompileInputs.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGam.6B308E9B.Up2Date
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\refint\BoardGamesLibrary.Games.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\BoardGamesLibrary.Games.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Games\obj\Debug\net8.0\ref\BoardGamesLibrary.Games.dll

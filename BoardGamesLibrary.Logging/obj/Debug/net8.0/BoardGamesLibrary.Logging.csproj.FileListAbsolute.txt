@@ -1,0 +1,11 @@
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\bin\Debug\net8.0\BoardGamesLibrary.Logging.deps.json
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\bin\Debug\net8.0\BoardGamesLibrary.Logging.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\bin\Debug\net8.0\BoardGamesLibrary.Logging.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\BoardGamesLibrary.Logging.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\BoardGamesLibrary.Logging.AssemblyInfoInputs.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\BoardGamesLibrary.Logging.AssemblyInfo.cs
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\BoardGamesLibrary.Logging.csproj.CoreCompileInputs.cache
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\BoardGamesLibrary.Logging.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\refint\BoardGamesLibrary.Logging.dll
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\BoardGamesLibrary.Logging.pdb
+C:\Users\papay\Desktop\Diplom\DPFah\3\BoardGamesLibrary.Logging\obj\Debug\net8.0\ref\BoardGamesLibrary.Logging.dll
