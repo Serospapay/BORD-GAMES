@@ -5,15 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="600">
-    <Border Background="{StaticResource SurfaceColor}"
-            CornerRadius="12"
-            Padding="10">
+    <Border x:Name="BoardFrame"
+            Background="{StaticResource BoardFrame}"
+            BorderBrush="{StaticResource BoardFrame}"
+            BorderThickness="10"
+            Padding="0">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.3"/>
+            <DropShadowEffect Color="#000000" BlurRadius="25" ShadowDepth="8" Opacity="0.4"/>
         </Border.Effect>
         <UniformGrid x:Name="BoardGrid" 
                      Rows="8" 
                      Columns="8"/>
     </Border>
 </UserControl>
-

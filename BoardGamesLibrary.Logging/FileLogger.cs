@@ -12,12 +12,14 @@ namespace BoardGamesLibrary.Logging;
 /// </summary>
 public class FileLogger : ILogger, IDisposable
 {
+    private static int _instanceCounter = 0;
     private readonly LogLevel _minimumLevel;
     private readonly string _logDirectory;
     private readonly string _logFileName;
     private readonly object _lockObject = new();
     private StreamWriter? _writer;
     private DateTime _currentDate;
+    private readonly int _instanceId;
 
     public FileLogger(string logDirectory = "logs", string logFileName = "game.log", LogLevel minimumLevel = LogLevel.Debug)
     {
@@ -25,6 +27,7 @@ public class FileLogger : ILogger, IDisposable
         _logDirectory = logDirectory;
         _logFileName = logFileName;
         _currentDate = DateTime.Today;
+        _instanceId = Interlocked.Increment(ref _instanceCounter);
 
         Directory.CreateDirectory(_logDirectory);
         InitializeWriter();
@@ -32,12 +35,50 @@ public class FileLogger : ILogger, IDisposable
 
     private void InitializeWriter()
     {
-        var filePath = Path.Combine(_logDirectory, $"{DateTime.Today:yyyy-MM-dd}_{_logFileName}");
-        _writer = new StreamWriter(filePath, append: true)
+        var datePrefix = $"{DateTime.Today:yyyy-MM-dd}_";
+        var primaryPath = Path.Combine(_logDirectory, $"{datePrefix}{_logFileName}");
+        _writer = TryCreateWriter(primaryPath);
+
+        // Якщо основний файл зайнятий іншим екземпляром - пишемо в fallback-файл,
+        // щоб запуск гри ніколи не падав через lock.
+        if (_writer == null)
         {
-            AutoFlush = true
-        };
+            var baseName = Path.GetFileNameWithoutExtension(_logFileName);
+            var ext = Path.GetExtension(_logFileName);
+            var fallbackPath = Path.Combine(
+                _logDirectory,
+                $"{DateTime.Today:yyyy-MM-dd}_{baseName}_{Environment.ProcessId}_{_instanceId}{ext}");
+            _writer = TryCreateWriter(fallbackPath);
+        }
+
         _currentDate = DateTime.Today;
+    }
+
+    private static StreamWriter? TryCreateWriter(string path)
+    {
+        const int maxAttempts = 5;
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            try
+            {
+                var stream = new FileStream(
+                    path,
+                    FileMode.Append,
+                    FileAccess.Write,
+                    FileShare.ReadWrite | FileShare.Delete);
+                return new StreamWriter(stream) { AutoFlush = true };
+            }
+            catch (IOException) when (attempt < maxAttempts - 1)
+            {
+                Thread.Sleep(50);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private void CheckDateRotation()
@@ -57,6 +98,8 @@ public class FileLogger : ILogger, IDisposable
         lock (_lockObject)
         {
             CheckDateRotation();
+            if (_writer == null)
+                InitializeWriter();
 
             if (_writer == null)
                 return;
@@ -105,7 +148,11 @@ public class FileLogger : ILogger, IDisposable
 
     public void Dispose()
     {
-        _writer?.Dispose();
+        lock (_lockObject)
+        {
+            _writer?.Dispose();
+            _writer = null;
+        }
     }
 }
 

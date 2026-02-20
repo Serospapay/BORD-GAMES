@@ -69,5 +69,10 @@ public interface IGame
     /// Отримує переможця (якщо гра завершена)
     /// </summary>
     Player? GetWinner();
+
+    /// <summary>
+    /// Створює копію гри для симуляції ходів (наприклад, для AI)
+    /// </summary>
+    IGame Clone();
 }
 

@@ -42,68 +42,13 @@ public class CheckersAIPlayer : BaseAIPlayer
         if (game is not CheckersGame checkersGame)
             return game;
 
-        // Перевіряємо, чи оригінальна гра в правильному стані для клонування
         if (checkersGame.State != GameState.InProgress)
         {
             _logger?.LogWarning($"Не можна клонувати гру, яка не в стані InProgress (State: {checkersGame.State})");
             return game;
         }
 
-        try
-        {
-            var newGame = new CheckersGame(_logger ?? new ConsoleLogger(LogLevel.Info));
-            var clonedBoard = checkersGame.Board.Clone() as CheckersBoard;
-            if (clonedBoard == null)
-            {
-                _logger?.LogError("Не вдалося клонувати дошку для шашок");
-                return game;
-            }
-
-            var boardField = typeof(CheckersGame).GetField("Board", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (boardField == null)
-            {
-                _logger?.LogError("Не вдалося знайти поле Board через рефлексію");
-                return game;
-            }
-            boardField.SetValue(newGame, clonedBoard);
-
-            var stateField = typeof(CheckersGame).GetField("State", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var currentPlayerField = typeof(CheckersGame).GetField("CurrentPlayer", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            if (stateField != null && currentPlayerField != null)
-            {
-                // Завжди встановлюємо InProgress для клонованої гри
-                stateField.SetValue(newGame, GameState.InProgress);
-                currentPlayerField.SetValue(newGame, checkersGame.CurrentPlayer);
-                
-                if (newGame.State != GameState.InProgress)
-                {
-                    _logger?.LogWarning($"Клонована гра не в стані InProgress");
-                    return game;
-                }
-                
-                if (newGame.CurrentPlayer != checkersGame.CurrentPlayer)
-                {
-                    _logger?.LogWarning($"Клонована гра має іншого гравця (Expected: {checkersGame.CurrentPlayer}, Actual: {newGame.CurrentPlayer})");
-                    return game;
-                }
-            }
-            else
-            {
-                _logger?.LogWarning("Не вдалося відновити стан гри через рефлексію");
-                return game;
-            }
-
-            return newGame;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError("Помилка при клонуванні гри в шашки", ex);
-            return game;
-        }
+        return checkersGame.Clone();
     }
 
     private IMove? GetBestMoveMinimax(CheckersGame game, int depth)

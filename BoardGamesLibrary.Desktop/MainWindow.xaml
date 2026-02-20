@@ -1,4 +1,4 @@
-﻿<Window x:Class="BoardGamesLibrary.Desktop.MainWindow"
+<Window x:Class="BoardGamesLibrary.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -9,7 +9,7 @@
         Height="800" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundGradient}"
+        Background="{StaticResource WindowBackground}"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResize">
@@ -18,6 +18,137 @@
             <DoubleAnimation Storyboard.TargetProperty="Opacity" 
                            From="0" To="1" Duration="0:0:0.5"/>
         </Storyboard>
+        
+        <!-- Стиль міні-кнопки режиму (пігулка: прозорий фон, білий бордер, при hover - білий фон, темний текст) -->
+        <Style x:Key="HoverOverlayButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PillBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="20"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="White"/>
+                                <Setter Property="Foreground" Value="#1A1A24"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Стиль картки гри: Overlay-ефект при наведенні -->
+        <Style x:Key="GameCardStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="RootBorder"
+                                CornerRadius="15"
+                                Cursor="Hand">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#2D2B4A" Offset="0"/>
+                                    <GradientStop Color="#3D3A5C" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
+                            </Border.Effect>
+                            <Grid>
+                                <!-- ШАР 1: Default View - назва гри (великий жирний текст по центру) -->
+                                <StackPanel x:Name="DefaultView"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                    <ContentPresenter Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <!-- ШАР 2: Hover View - кнопки режимів (Overlay) -->
+                                <StackPanel x:Name="HoverMenu"
+                                            Opacity="0"
+                                            IsHitTestVisible="False"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Center">
+                                    <Button Content="2 гравці"
+                                            Tag="2Players"
+                                            Style="{StaticResource HoverOverlayButtonStyle}"
+                                            Click="GameModeButton_Click"/>
+                                    <Button Content="AI Легко"
+                                            Tag="AIEasy"
+                                            Style="{StaticResource HoverOverlayButtonStyle}"
+                                            Click="GameModeButton_Click"/>
+                                    <Button Content="AI Середня"
+                                            Tag="AIMedium"
+                                            Style="{StaticResource HoverOverlayButtonStyle}"
+                                            Click="GameModeButton_Click"/>
+                                    <Button Content="AI Важка"
+                                            Tag="AIHard"
+                                            Style="{StaticResource HoverOverlayButtonStyle}"
+                                            Click="GameModeButton_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True" SourceName="RootBorder">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="DefaultView"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.1"
+                                                             Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverMenu"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1"
+                                                             Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="DefaultView"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1"
+                                                             Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverMenu"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0"
+                                                             Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                                <Setter TargetName="DefaultView" Property="IsHitTestVisible" Value="False"/>
+                                <Setter TargetName="HoverMenu" Property="IsHitTestVisible" Value="True"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Стиль панелі статистики (уніфікований з InfoPanelStyle) -->
+        <Style x:Key="StatisticsPanelStyle" TargetType="Border" BasedOn="{StaticResource InfoPanelStyle}"/>
     </Window.Resources>
     <Window.Triggers>
         <EventTrigger RoutedEvent="Window.Loaded">
@@ -31,7 +162,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <!-- Заголовок з градієнтом -->
+        <!-- Заголовок -->
         <Border Grid.Row="0" 
                 Background="{StaticResource PrimaryGradient}" 
                 Padding="30"
@@ -43,7 +174,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="🎮 БІБЛІОТЕКА ІГОР" 
+                    <TextBlock Text="БІБЛІОТЕКА ІГОР" 
                               FontSize="36" 
                               FontWeight="Bold" 
                               Foreground="White"
@@ -55,123 +186,115 @@
                 </StackPanel>
                 <Button Grid.Column="1" 
                        x:Name="SoundToggleButton"
-                       Content="🔊" 
-                       Width="45" 
+                       Content="Звук" 
+                       MinWidth="80"
+                       Padding="12,0"
                        Height="45"
-                       Background="Transparent"
-                       Foreground="White"
-                       BorderThickness="0"
-                       FontSize="20"
+                       FontSize="15"
                        FontWeight="Bold"
-                       Cursor="Hand"
+                       Style="{StaticResource HeaderButtonStyle}"
                        Click="SoundToggleButton_Click"
                        Margin="0,0,10,0"
-                       ToolTip="Вимкнути/Увімкнути звук">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                BorderThickness="0">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                            VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#3B82F6"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                       ToolTip="Вимкнути/Увімкнути звук"/>
                 <Button Grid.Column="2" 
-                       Content="✕" 
+                       Content="&#x2715;" 
                        Width="45" 
                        Height="45"
-                       Background="Transparent"
-                       Foreground="White"
-                       BorderThickness="0"
                        FontSize="24"
                        FontWeight="Bold"
-                       Cursor="Hand"
-                       Click="CloseButton_Click"
-                       Margin="0,0,0,0">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                BorderThickness="0">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                            VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#EF4444"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                       Style="{StaticResource CloseButtonStyle}"
+                       Click="CloseButton_Click"/>
             </Grid>
         </Border>
         
         <!-- Контент -->
-        <Grid Grid.Row="1" Margin="50">
+        <Grid Grid.Row="1" Margin="50" Background="{StaticResource WindowBackground}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3*"/>
                 <ColumnDefinition Width="2*"/>
             </Grid.ColumnDefinitions>
             
             <Grid Grid.Column="0" Margin="0,0,30,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            
-            <TextBlock Grid.Row="0" 
-                      Text="Оберіть гру для початку" 
-                      FontSize="28" 
-                      FontWeight="SemiBold"
-                      Foreground="{StaticResource TextPrimaryColor}"
-                      Margin="0,0,0,40"
-                      HorizontalAlignment="Center"/>
-            
-            <UniformGrid Grid.Row="1" 
-                        Columns="2" 
-                        Rows="2">
-                <Button Content="♔ ШАХИ" 
-                       Style="{StaticResource MenuButtonStyle}"
-                       Click="ChessButton_Click"
-                       Margin="20"/>
-                <Button Content="● ШАШКИ" 
-                       Style="{StaticResource MenuButtonStyle}"
-                       Click="CheckersButton_Click"
-                       Margin="20"/>
-                <Button Content="◉ REVERSI" 
-                       Style="{StaticResource MenuButtonStyle}"
-                       Click="ReversiButton_Click"
-                       Margin="20"/>
-                <Button Content="⚫ CONNECT FOUR" 
-                       Style="{StaticResource MenuButtonStyle}"
-                       Click="ConnectFourButton_Click"
-                       Margin="20"/>
-            </UniformGrid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" 
+                          Text="Оберіть гру для початку" 
+                          FontSize="28" 
+                          FontWeight="SemiBold"
+                          Foreground="{StaticResource TextPrimary}"
+                          Margin="0,0,0,40"
+                          HorizontalAlignment="Center"/>
+                
+                <UniformGrid Grid.Row="1" Columns="2" Rows="2">
+                    <Button x:Name="ChessCard"
+                            Content="ШАХИ"
+                            Tag="Chess"
+                            Style="{StaticResource GameCardStyle}"
+                            Margin="20">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                    <Button x:Name="CheckersCard"
+                            Content="ШАШКИ"
+                            Tag="Checkers"
+                            Style="{StaticResource GameCardStyle}"
+                            Margin="20">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                    <Button x:Name="ReversiCard"
+                            Content="REVERSI"
+                            Tag="Reversi"
+                            Style="{StaticResource GameCardStyle}"
+                            Margin="20">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                    <Button x:Name="ConnectFourCard"
+                            Content="CONNECT FOUR"
+                            Tag="ConnectFour"
+                            Style="{StaticResource GameCardStyle}"
+                            Margin="20">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                </UniformGrid>
             </Grid>
             
             <!-- Панель статистики -->
             <Border Grid.Column="1" 
-                    Style="{StaticResource InfoPanelStyle}"
+                    Style="{StaticResource StatisticsPanelStyle}"
                     MinWidth="300">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -183,7 +306,7 @@
                               Text="СТАТИСТИКА"
                               FontSize="20"
                               FontWeight="Bold"
-                              Foreground="{StaticResource TextPrimaryColor}"
+                              Foreground="{StaticResource TextPrimary}"
                               Margin="0,0,0,20"
                               HorizontalAlignment="Center"/>
                     

@@ -42,72 +42,13 @@ public class ChessAIPlayer : BaseAIPlayer
         if (game is not ChessGame chessGame)
             return game;
 
-        // Перевіряємо, чи оригінальна гра в правильному стані для клонування
         if (chessGame.State != GameState.InProgress)
         {
             _logger?.LogWarning($"Не можна клонувати гру, яка не в стані InProgress (State: {chessGame.State})");
             return game;
         }
 
-        try
-        {
-            // Створюємо нову гру з клонованою дошкою
-            var newGame = new ChessGame(_logger ?? new ConsoleLogger(LogLevel.Info));
-            var clonedBoard = chessGame.Board.Clone() as ChessBoard;
-            if (clonedBoard == null)
-            {
-                _logger?.LogError("Не вдалося клонувати шахову дошку");
-                return game;
-            }
-
-            var boardField = typeof(ChessGame).GetField("Board", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (boardField == null)
-            {
-                _logger?.LogError("Не вдалося знайти поле Board через рефлексію");
-                return game;
-            }
-            boardField.SetValue(newGame, clonedBoard);
-            
-            // Відновлюємо стан через рефлексію
-            var stateField = typeof(ChessGame).GetField("State", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var currentPlayerField = typeof(ChessGame).GetField("CurrentPlayer", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            if (stateField != null && currentPlayerField != null)
-            {
-                // Завжди встановлюємо InProgress для клонованої гри
-                stateField.SetValue(newGame, GameState.InProgress);
-                currentPlayerField.SetValue(newGame, chessGame.CurrentPlayer);
-                
-                // Перевіряємо, чи гра в правильному стані
-                if (newGame.State != GameState.InProgress)
-                {
-                    _logger?.LogWarning($"Клонована гра не в стані InProgress, а в стані {newGame.State}");
-                    return game; // Повертаємо оригінальну гру замість некоректного клону
-                }
-                
-                // Додаткова перевірка CurrentPlayer
-                if (newGame.CurrentPlayer != chessGame.CurrentPlayer)
-                {
-                    _logger?.LogWarning($"Клонована гра має іншого гравця (Expected: {chessGame.CurrentPlayer}, Actual: {newGame.CurrentPlayer})");
-                    return game;
-                }
-            }
-            else
-            {
-                _logger?.LogWarning("Не вдалося відновити стан гри через рефлексію");
-                return game; // Повертаємо оригінальну гру замість некоректного клону
-            }
-
-            return newGame;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError("Помилка при клонуванні шахової гри", ex);
-            return game;
-        }
+        return chessGame.Clone();
     }
 
     private IMove? GetBestMoveMinimax(ChessGame game, int depth)

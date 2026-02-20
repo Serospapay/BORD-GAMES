@@ -14,7 +14,7 @@ public partial class RulesDialog : Window
     public RulesDialog(string gameName, string rulesText)
     {
         InitializeComponent();
-        TitleText.Text = $"📖 ПРАВИЛА: {gameName.ToUpper()}";
+        TitleText.Text = $"ПРАВИЛА: {gameName.ToUpper()}";
         RulesText.Text = rulesText;
     }
 

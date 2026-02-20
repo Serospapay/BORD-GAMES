@@ -33,6 +33,16 @@ public class ConnectFourGame : IGame
         CurrentPlayer = Player.Player1;
     }
 
+    private ConnectFourGame(ILogger logger, IBoard board, GameState state, Player currentPlayer)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _errorHandler = new ErrorHandler(_logger);
+        _moveHistory = new List<ConnectFourMove>();
+        Board = board;
+        State = state;
+        CurrentPlayer = currentPlayer;
+    }
+
     public void StartNewGame()
     {
         _logger.LogInfo("Початок нової гри Connect Four");
@@ -44,6 +54,12 @@ public class ConnectFourGame : IGame
 
     public bool MakeMove(IMove move)
     {
+        if (move == null)
+        {
+            _logger.LogWarning("Спроба зробити null хід");
+            return false;
+        }
+
         if (move is not ConnectFourMove connectFourMove)
         {
             _logger.LogWarning($"Невірний тип ходу: {move?.GetType().Name}");
@@ -148,6 +164,11 @@ public class ConnectFourGame : IGame
             GameState.Player2Won => Player.Player2,
             _ => null
         };
+    }
+
+    public IGame Clone()
+    {
+        return new ConnectFourGame(_logger, Board.Clone(), State, CurrentPlayer);
     }
 
     private void CheckGameState()

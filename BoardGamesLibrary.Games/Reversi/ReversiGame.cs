@@ -33,6 +33,16 @@ public class ReversiGame : IGame
         CurrentPlayer = Player.Player1;
     }
 
+    private ReversiGame(ILogger logger, IBoard board, GameState state, Player currentPlayer)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _errorHandler = new ErrorHandler(_logger);
+        _moveHistory = new List<ReversiMove>();
+        Board = board;
+        State = state;
+        CurrentPlayer = currentPlayer;
+    }
+
     public void StartNewGame()
     {
         _logger.LogInfo("Початок нової гри Reversi");
@@ -240,6 +250,11 @@ public class ReversiGame : IGame
             GameState.Player2Won => Player.Player2,
             _ => null
         };
+    }
+
+    public IGame Clone()
+    {
+        return new ReversiGame(_logger, Board.Clone(), State, CurrentPlayer);
     }
 
     private void CheckGameState()

@@ -6,7 +6,7 @@
         Height="900" 
         Width="1100"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundGradient}"
+        Background="{StaticResource WindowBackground}"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResize">
@@ -27,44 +27,19 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="● ШАШКИ" 
-                          FontSize="32" 
+                <TextBlock Text="ШАШКИ" 
+                          FontSize="28" 
                           FontWeight="Bold" 
                           Foreground="White"
                           VerticalAlignment="Center"/>
                 <Button Grid.Column="1" 
-                       Content="✕" 
+                       Content="&#x2715;" 
                        Width="40" 
                        Height="40"
-                       Background="Transparent"
-                       Foreground="White"
-                       BorderThickness="0"
                        FontSize="20"
                        FontWeight="Bold"
-                       Cursor="Hand"
-                       Click="CloseButton_Click">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                BorderThickness="0">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                            VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#EF4444"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                       Style="{StaticResource CloseButtonStyle}"
+                       Click="CloseButton_Click"/>
             </Grid>
         </Border>
         
@@ -72,12 +47,13 @@
         <Border Grid.Row="1" 
                 Margin="30"
                 Background="{StaticResource SurfaceColor}"
+                BorderBrush="{StaticResource AccentColor}"
+                BorderThickness="1"
                 CornerRadius="16">
             <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="5" Opacity="0.3"/>
+                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
             </Border.Effect>
-            <local:CheckersBoardControl x:Name="CheckersBoard" 
-                                        Margin="20"/>
+            <local:CheckersBoardControl x:Name="CheckersBoard" Margin="20"/>
         </Border>
         
         <!-- Інформація -->
@@ -93,23 +69,28 @@
                     <TextBlock x:Name="CurrentPlayerText" 
                               FontSize="20" 
                               FontWeight="Bold"
-                              Foreground="{StaticResource TextPrimaryColor}"/>
+                              Foreground="{StaticResource TextPrimary}"/>
                     <TextBlock x:Name="StatusText" 
                               FontSize="14" 
-                              Foreground="{StaticResource TextSecondaryColor}"
-                              Margin="0,8,0,0"/>
+                              Foreground="{StaticResource TextSecondary}"
+                              Margin="0,4,0,0"/>
+                    <StackPanel x:Name="LiveStatsPanel" Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock x:Name="MoveCountText" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,0,20,0"/>
+                        <TextBlock x:Name="GameTimeText" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,0,20,0"/>
+                        <TextBlock x:Name="PiecesText" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="📖 Правила" 
-                           Style="{StaticResource MenuButtonStyle}"
+                    <Button Content="Правила" 
+                           Style="{StaticResource PrimaryButtonStyle}"
                            Padding="20,12"
-                           FontSize="16"
-                           Margin="0,0,15,0"
+                           FontSize="15"
+                           Margin="0,0,12,0"
                            Click="RulesButton_Click"/>
-                    <Button Content="🔄 Нова гра" 
-                           Style="{StaticResource MenuButtonStyle}"
-                           Padding="25,12"
-                           FontSize="16"
+                    <Button Content="Нова гра" 
+                           Style="{StaticResource PrimaryButtonStyle}"
+                           Padding="24,12"
+                           FontSize="15"
                            Click="NewGameButton_Click"/>
                 </StackPanel>
             </Grid>

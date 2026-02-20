@@ -17,6 +17,15 @@ public class ChessBoard : BaseBoard
 {
     private readonly ILogger? _logger;
 
+    public bool WhiteKingMoved { get; private set; }
+    public bool WhiteRookKingMoved { get; private set; }
+    public bool WhiteRookQueenMoved { get; private set; }
+    public bool BlackKingMoved { get; private set; }
+    public bool BlackRookKingMoved { get; private set; }
+    public bool BlackRookQueenMoved { get; private set; }
+
+    public Position? EnPassantTarget { get; set; }
+
     public ChessBoard(ILogger? logger = null) : base(8, 8)
     {
         _logger = logger;
@@ -26,6 +35,13 @@ public class ChessBoard : BaseBoard
     private ChessBoard(ChessBoard other) : base(8, 8)
     {
         _logger = other._logger;
+        WhiteKingMoved = other.WhiteKingMoved;
+        WhiteRookKingMoved = other.WhiteRookKingMoved;
+        WhiteRookQueenMoved = other.WhiteRookQueenMoved;
+        BlackKingMoved = other.BlackKingMoved;
+        BlackRookKingMoved = other.BlackRookKingMoved;
+        BlackRookQueenMoved = other.BlackRookQueenMoved;
+        EnPassantTarget = other.EnPassantTarget;
         for (int row = 0; row < 8; row++)
         {
             for (int col = 0; col < 8; col++)
@@ -36,6 +52,42 @@ public class ChessBoard : BaseBoard
                     _pieces[row, col] = new ChessPiece(chessPiece.Position, chessPiece.Owner, chessPiece.Type);
                 }
             }
+        }
+    }
+
+    public void MarkPieceMoved(Position from, ChessPiece piece)
+    {
+        if (piece.Type == ChessPieceType.King)
+        {
+            if (piece.Owner == Player.Player1) WhiteKingMoved = true;
+            else BlackKingMoved = true;
+        }
+        else if (piece.Type == ChessPieceType.Rook)
+        {
+            if (piece.Owner == Player.Player1)
+            {
+                if (from.Row == 0 && from.Column == 7) WhiteRookKingMoved = true;
+                else if (from.Row == 0 && from.Column == 0) WhiteRookQueenMoved = true;
+            }
+            else
+            {
+                if (from.Row == 7 && from.Column == 7) BlackRookKingMoved = true;
+                else if (from.Row == 7 && from.Column == 0) BlackRookQueenMoved = true;
+            }
+        }
+    }
+
+    public void MarkRookCaptured(Position position, Player rookOwner)
+    {
+        if (rookOwner == Player.Player1)
+        {
+            if (position.Row == 0 && position.Column == 7) WhiteRookKingMoved = true;
+            else if (position.Row == 0 && position.Column == 0) WhiteRookQueenMoved = true;
+        }
+        else if (rookOwner == Player.Player2)
+        {
+            if (position.Row == 7 && position.Column == 7) BlackRookKingMoved = true;
+            else if (position.Row == 7 && position.Column == 0) BlackRookQueenMoved = true;
         }
     }
 

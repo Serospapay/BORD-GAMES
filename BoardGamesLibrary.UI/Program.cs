@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file: Program.cs
  * @description: Головний файл консольного UI для бібліотеки ігор
  * @dependencies: All game libraries, Logging
@@ -441,7 +441,7 @@ class Program
     static bool TryParseChessMove(string input, Player player, out ChessMove move)
     {
         move = null!;
-        var parts = input.Split(new[] { "->", "->", "-" }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = input.Split(new[] { "->", "-" }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2) return false;
 
         var fromParts = parts[0].Trim().Split(' ');
@@ -464,7 +464,7 @@ class Program
     static bool TryParseMove(string input, Player player, out CheckersMove move)
     {
         move = null!;
-        var parts = input.Split(new[] { "->", "->", "-" }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = input.Split(new[] { "->", "-" }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2) return false;
 
         var fromParts = parts[0].Trim().Split(' ');

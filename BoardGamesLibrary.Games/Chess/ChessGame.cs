@@ -33,6 +33,16 @@ public class ChessGame : IGame
         CurrentPlayer = Player.Player1;
     }
 
+    private ChessGame(ILogger logger, IBoard board, GameState state, Player currentPlayer)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _errorHandler = new ErrorHandler(_logger);
+        _moveHistory = new List<ChessMove>();
+        Board = board;
+        State = state;
+        CurrentPlayer = currentPlayer;
+    }
+
     public void StartNewGame()
     {
         _logger.LogInfo("Початок нової шахової гри");
@@ -103,15 +113,76 @@ public class ChessGame : IGame
                 return false;
             }
 
-            // Зберігаємо захоплену фігуру
-            chessMove.CapturedPiece = board.GetPiece(chessMove.To);
+            board.EnPassantTarget = null;
 
-            // Виконуємо хід
-            board.SetPiece(chessMove.From, null);
-            board.SetPiece(chessMove.To, piece);
-            piece.MoveTo(chessMove.To);
+            board.MarkPieceMoved(chessMove.From, piece);
 
-            // Обробка спеціальних ходів
+            if (chessMove.IsCastling)
+            {
+                chessMove.CapturedPiece = null;
+                board.SetPiece(chessMove.From, null);
+                board.SetPiece(chessMove.To, piece);
+                piece.MoveTo(chessMove.To);
+                if (chessMove.To.Column == 6)
+                {
+                    var rook = board.GetPiece(new Position(chessMove.From.Row, 7)) as ChessPiece;
+                    if (rook != null)
+                    {
+                        board.MarkPieceMoved(new Position(chessMove.From.Row, 7), rook);
+                        board.SetPiece(new Position(chessMove.From.Row, 7), null);
+                        board.SetPiece(new Position(chessMove.From.Row, 5), rook);
+                        rook.MoveTo(new Position(chessMove.From.Row, 5));
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Рокіровка неможлива: відсутня тура на королівському фланзі");
+                        return false;
+                    }
+                }
+                else if (chessMove.To.Column == 2)
+                {
+                    var rook = board.GetPiece(new Position(chessMove.From.Row, 0)) as ChessPiece;
+                    if (rook != null)
+                    {
+                        board.MarkPieceMoved(new Position(chessMove.From.Row, 0), rook);
+                        board.SetPiece(new Position(chessMove.From.Row, 0), null);
+                        board.SetPiece(new Position(chessMove.From.Row, 3), rook);
+                        rook.MoveTo(new Position(chessMove.From.Row, 3));
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Рокіровка неможлива: відсутня тура на ферзевому фланзі");
+                        return false;
+                    }
+                }
+            }
+            else if (chessMove.IsEnPassant)
+            {
+                chessMove.CapturedPiece = board.GetPiece(new Position(chessMove.From.Row, chessMove.To.Column)) as ChessPiece;
+                if (chessMove.CapturedPiece != null)
+                    board.SetPiece(new Position(chessMove.From.Row, chessMove.To.Column), null);
+                board.SetPiece(chessMove.From, null);
+                board.SetPiece(chessMove.To, piece);
+                piece.MoveTo(chessMove.To);
+            }
+            else
+            {
+                chessMove.CapturedPiece = board.GetPiece(chessMove.To) as ChessPiece;
+                if (chessMove.CapturedPiece is { Type: ChessPieceType.Rook })
+                {
+                    board.MarkRookCaptured(chessMove.To, chessMove.CapturedPiece.Owner);
+                }
+                board.SetPiece(chessMove.From, null);
+                board.SetPiece(chessMove.To, piece);
+                piece.MoveTo(chessMove.To);
+
+                if (piece.Type == ChessPieceType.Pawn && Math.Abs(chessMove.To.Row - chessMove.From.Row) == 2)
+                {
+                    int epRow = CurrentPlayer == Player.Player1 ? 2 : 5;
+                    board.EnPassantTarget = new Position(epRow, chessMove.To.Column);
+                }
+            }
+
             if (chessMove.IsPromotion && chessMove.PromotionType.HasValue)
             {
                 var newPiece = new ChessPiece(chessMove.To, CurrentPlayer, chessMove.PromotionType.Value);
@@ -149,12 +220,185 @@ public class ChessGame : IGame
                 if (piece != null && piece.Owner == player)
                 {
                     var moves = GetValidMovesForPiece(piece, board);
-                    validMoves.AddRange(moves);
+                    foreach (var move in moves)
+                    {
+                        if (!WouldLeaveKingInCheck(board, move, player))
+                            validMoves.Add(move);
+                    }
                 }
             }
         }
 
+        var castlingMoves = GetCastlingMoves(board, player);
+        foreach (var move in castlingMoves)
+        {
+            if (!WouldLeaveKingInCheck(board, move, player))
+                validMoves.Add(move);
+        }
+
         return validMoves;
+    }
+
+    private bool IsKingInCheck(ChessBoard board, Player kingOwner)
+    {
+        var kingPos = FindKingPosition(board, kingOwner);
+        if (!kingPos.HasValue) return false;
+        var opponent = kingOwner.GetOpponent();
+        return IsSquareAttackedBy(board, kingPos.Value, opponent);
+    }
+
+    private Position? FindKingPosition(ChessBoard board, Player owner)
+    {
+        for (int row = 0; row < 8; row++)
+        {
+            for (int col = 0; col < 8; col++)
+            {
+                var pos = new Position(row, col);
+                var piece = board.GetPiece(pos);
+                if (piece is ChessPiece cp && cp.Type == ChessPieceType.King && cp.Owner == owner)
+                    return pos;
+            }
+        }
+        return null;
+    }
+
+    private bool IsSquareAttackedBy(ChessBoard board, Position square, Player attacker)
+    {
+        for (int row = 0; row < 8; row++)
+        {
+            for (int col = 0; col < 8; col++)
+            {
+                var pos = new Position(row, col);
+                var piece = board.GetPiece(pos) as ChessPiece;
+                if (piece == null || piece.Owner != attacker) continue;
+
+                if (piece.Type == ChessPieceType.Pawn)
+                {
+                    int dir = attacker == Player.Player1 ? 1 : -1;
+                    if (square.Row == pos.Row + dir && Math.Abs(square.Column - pos.Column) == 1)
+                        return true;
+                }
+                else
+                {
+                    var moves = GetValidMovesForPiece(piece, board);
+                    if (moves.Any(m => m.To == square))
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private bool WouldLeaveKingInCheck(ChessBoard board, ChessMove move, Player player)
+    {
+        var clone = (ChessBoard)board.Clone();
+        var piece = clone.GetPiece(move.From) as ChessPiece;
+        if (piece == null) return true;
+
+        var newPiece = new ChessPiece(move.To, piece.Owner, piece.Type);
+        clone.SetPiece(move.From, null);
+        clone.SetPiece(move.To, newPiece);
+
+        if (move.IsEnPassant)
+        {
+            var captureRow = player == Player.Player1 ? move.To.Row - 1 : move.To.Row + 1;
+            clone.SetPiece(new Position(captureRow, move.To.Column), null);
+        }
+        else if (move.IsCastling)
+        {
+            if (move.To.Column == 6)
+            {
+                var rook = clone.GetPiece(new Position(move.From.Row, 7)) as ChessPiece;
+                if (rook != null)
+                {
+                    clone.SetPiece(new Position(move.From.Row, 7), null);
+                    clone.SetPiece(new Position(move.From.Row, 5), new ChessPiece(new Position(move.From.Row, 5), rook.Owner, ChessPieceType.Rook));
+                }
+            }
+            else if (move.To.Column == 2)
+            {
+                var rook = clone.GetPiece(new Position(move.From.Row, 0)) as ChessPiece;
+                if (rook != null)
+                {
+                    clone.SetPiece(new Position(move.From.Row, 0), null);
+                    clone.SetPiece(new Position(move.From.Row, 3), new ChessPiece(new Position(move.From.Row, 3), rook.Owner, ChessPieceType.Rook));
+                }
+            }
+        }
+
+        return IsKingInCheck(clone, player);
+    }
+
+    private IEnumerable<ChessMove> GetCastlingMoves(ChessBoard board, Player player)
+    {
+        var moves = new List<ChessMove>();
+        int kingRow = player == Player.Player1 ? 0 : 7;
+
+        if (player == Player.Player1)
+        {
+            if (!board.WhiteKingMoved && !IsKingInCheck(board, player))
+            {
+                var kingSideRook = GetPiece(board, kingRow, 7) as ChessPiece;
+                if (!board.WhiteRookKingMoved &&
+                    kingSideRook is { Owner: Player.Player1, Type: ChessPieceType.Rook } &&
+                    GetPiece(board, kingRow, 5) == null &&
+                    GetPiece(board, kingRow, 6) == null)
+                {
+                    if (!IsSquareAttackedBy(board, new Position(kingRow, 5), Player.Player2))
+                    {
+                        moves.Add(new ChessMove(new Position(kingRow, 4), new Position(kingRow, 6), player) { IsCastling = true });
+                    }
+                }
+                var queenSideRook = GetPiece(board, kingRow, 0) as ChessPiece;
+                if (!board.WhiteRookQueenMoved &&
+                    queenSideRook is { Owner: Player.Player1, Type: ChessPieceType.Rook } &&
+                    GetPiece(board, kingRow, 1) == null &&
+                    GetPiece(board, kingRow, 2) == null &&
+                    GetPiece(board, kingRow, 3) == null)
+                {
+                    if (!IsSquareAttackedBy(board, new Position(kingRow, 3), Player.Player2))
+                    {
+                        moves.Add(new ChessMove(new Position(kingRow, 4), new Position(kingRow, 2), player) { IsCastling = true });
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (!board.BlackKingMoved && !IsKingInCheck(board, player))
+            {
+                var kingSideRook = GetPiece(board, kingRow, 7) as ChessPiece;
+                if (!board.BlackRookKingMoved &&
+                    kingSideRook is { Owner: Player.Player2, Type: ChessPieceType.Rook } &&
+                    GetPiece(board, kingRow, 5) == null &&
+                    GetPiece(board, kingRow, 6) == null)
+                {
+                    if (!IsSquareAttackedBy(board, new Position(kingRow, 5), Player.Player1))
+                    {
+                        moves.Add(new ChessMove(new Position(kingRow, 4), new Position(kingRow, 6), player) { IsCastling = true });
+                    }
+                }
+                var queenSideRook = GetPiece(board, kingRow, 0) as ChessPiece;
+                if (!board.BlackRookQueenMoved &&
+                    queenSideRook is { Owner: Player.Player2, Type: ChessPieceType.Rook } &&
+                    GetPiece(board, kingRow, 1) == null &&
+                    GetPiece(board, kingRow, 2) == null &&
+                    GetPiece(board, kingRow, 3) == null)
+                {
+                    if (!IsSquareAttackedBy(board, new Position(kingRow, 3), Player.Player1))
+                    {
+                        moves.Add(new ChessMove(new Position(kingRow, 4), new Position(kingRow, 2), player) { IsCastling = true });
+                    }
+                }
+            }
+        }
+
+        return moves;
+    }
+
+    private IPiece? GetPiece(ChessBoard board, int row, int col)
+    {
+        return board.GetPiece(new Position(row, col));
     }
 
     private IEnumerable<ChessMove> GetValidMovesForPiece(ChessPiece piece, ChessBoard board)
@@ -232,6 +476,17 @@ public class ChessGame : IGame
                     }
                     moves.Add(move);
                 }
+            }
+        }
+
+        // Взяття на проході (en passant)
+        if (board.EnPassantTarget.HasValue)
+        {
+            var epTarget = board.EnPassantTarget.Value;
+            if (epTarget.Row == pawn.Position.Row + direction && Math.Abs(epTarget.Column - pawn.Position.Column) == 1)
+            {
+                var move = new ChessMove(pawn.Position, epTarget, pawn.Owner) { IsEnPassant = true };
+                moves.Add(move);
             }
         }
 
@@ -394,7 +649,7 @@ public class ChessGame : IGame
         if (piece == null || piece.Owner != chessMove.Player)
             return false;
 
-        var validMoves = GetValidMovesForPiece(piece, board);
+        var validMoves = GetValidMoves(chessMove.Player).OfType<ChessMove>();
         return validMoves.Any(m => m.From == chessMove.From && m.To == chessMove.To);
     }
 
@@ -413,6 +668,11 @@ public class ChessGame : IGame
             GameState.Player2Won => Player.Player2,
             _ => null
         };
+    }
+
+    public IGame Clone()
+    {
+        return new ChessGame(_logger, Board.Clone(), State, CurrentPlayer);
     }
 
     private void CheckGameState()
@@ -451,12 +711,19 @@ public class ChessGame : IGame
         }
         else
         {
-            // Перевірка на пат (немає валідних ходів)
             var validMoves = GetValidMoves(CurrentPlayer);
             if (!validMoves.Any())
             {
-                State = GameState.Draw;
-                _logger.LogInfo("Гра завершена: Нічия (немає валідних ходів)");
+                if (IsKingInCheck(board, CurrentPlayer))
+                {
+                    State = CurrentPlayer == Player.Player1 ? GameState.Player2Won : GameState.Player1Won;
+                    _logger.LogInfo($"Гра завершена: Мат! Переміг {(State == GameState.Player1Won ? "Player1" : "Player2")}");
+                }
+                else
+                {
+                    State = GameState.Draw;
+                    _logger.LogInfo("Гра завершена: Пат (немає валідних ходів)");
+                }
             }
         }
     }

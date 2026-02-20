@@ -5,7 +5,7 @@
         Height="700" 
         Width="800"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BackgroundGradient}"
+        Background="{StaticResource WindowBackground}"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResize">
@@ -27,70 +27,49 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="TitleText"
-                          Text="📖 ПРАВИЛА ГРИ" 
+                          Text="ПРАВИЛА ГРИ" 
                           FontSize="28" 
                           FontWeight="Bold" 
                           Foreground="White"
                           VerticalAlignment="Center"/>
                 <Button Grid.Column="1" 
-                       Content="✕" 
+                       Content="&#x2715;" 
                        Width="40" 
                        Height="40"
-                       Background="Transparent"
-                       Foreground="White"
-                       BorderThickness="0"
                        FontSize="20"
                        FontWeight="Bold"
-                       Cursor="Hand"
-                       Click="CloseButton_Click">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8"
-                                                BorderThickness="0">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                            VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#EF4444"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                       Style="{StaticResource CloseButtonStyle}"
+                       Click="CloseButton_Click"/>
             </Grid>
         </Border>
         
         <!-- Контент -->
-        <ScrollViewer Grid.Row="1" 
-                     VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Disabled"
-                     Padding="30">
-            <TextBlock x:Name="RulesText"
-                      TextWrapping="Wrap"
-                      FontSize="16"
-                      Foreground="{StaticResource TextPrimaryColor}"
-                      LineHeight="28"/>
-        </ScrollViewer>
+        <Border Grid.Row="1" 
+                Margin="0,0,0,0"
+                Background="{StaticResource SurfaceColor}"
+                BorderBrush="{StaticResource AccentColor}"
+                BorderThickness="0,1,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="30">
+                <TextBlock x:Name="RulesText"
+                          TextWrapping="Wrap"
+                          FontSize="16"
+                          Foreground="{StaticResource TextPrimary}"
+                          LineHeight="28"/>
+            </ScrollViewer>
+        </Border>
         
         <!-- Кнопка закриття -->
         <Border Grid.Row="2" 
                 Style="{StaticResource InfoPanelStyle}" 
                 Margin="30,0,30,30">
             <Button Content="Закрити" 
-                   Style="{StaticResource MenuButtonStyle}"
-                   Padding="40,15"
-                   FontSize="18"
+                   Style="{StaticResource PrimaryButtonStyle}"
+                   Padding="40,14"
+                   FontSize="16"
                    HorizontalAlignment="Center"
                    Click="CloseButton_Click"/>
         </Border>
     </Grid>
 </Window>
-

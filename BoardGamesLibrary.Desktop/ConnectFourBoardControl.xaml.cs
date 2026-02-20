@@ -8,6 +8,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
+using System.Windows.Shapes;
 using BoardGamesLibrary.Core;
 using BoardGamesLibrary.Games.ConnectFour;
 using BoardGamesLibrary.Desktop.Services;
@@ -19,7 +21,7 @@ public partial class ConnectFourBoardControl : UserControl
 {
     private ConnectFourGame? _game;
     private Action? _onMoveMade;
-    private readonly Dictionary<Position, Border> _cells = new();
+    private readonly Dictionary<Position, Ellipse> _cells = new();
     private bool _isProcessingClick = false;
 
     public ConnectFourBoardControl()
@@ -33,7 +35,7 @@ public partial class ConnectFourBoardControl : UserControl
         _onMoveMade = onMoveMade;
         _cells.Clear();
         BoardGrid.Children.Clear();
-        
+
         CreateBoard();
         UpdateBoard();
     }
@@ -45,16 +47,21 @@ public partial class ConnectFourBoardControl : UserControl
             for (int col = 0; col < 7; col++)
             {
                 var position = new Position(row, col);
-                var cell = CreateCell(position);
-                _cells[position] = cell;
-                BoardGrid.Children.Add(cell);
+                var (root, ellipse) = CreateCell(position);
+                _cells[position] = ellipse;
+                BoardGrid.Children.Add(root);
             }
         }
     }
 
-    private Border CreateCell(Position position)
+    private (Grid Root, Ellipse Ellipse) CreateCell(Position position)
     {
-        var cell = new Border
+        var root = new Grid
+        {
+            Margin = new Thickness(4)
+        };
+
+        var slotBg = new Border
         {
             Background = new LinearGradientBrush
             {
@@ -66,29 +73,20 @@ public partial class ConnectFourBoardControl : UserControl
                     new GradientStop(Color.FromRgb(37, 99, 235), 1)
                 }
             },
-            BorderBrush = new SolidColorBrush(Color.FromRgb(30, 58, 138)),
-            BorderThickness = new Thickness(2),
-            Margin = new Thickness(3),
-            CornerRadius = new CornerRadius(8),
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
-            {
-                Color = Colors.Black,
-                BlurRadius = 5,
-                ShadowDepth = 2,
-                Opacity = 0.3
-            }
+            CornerRadius = new CornerRadius(8)
         };
+        root.Children.Add(slotBg);
 
-        var ellipse = new System.Windows.Shapes.Ellipse
+        var ellipse = new Ellipse
         {
-            Width = 65,
-            Height = 65,
+            Width = 80,
+            Height = 80,
             Fill = new SolidColorBrush(Color.FromRgb(241, 245, 249)),
             Stroke = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             StrokeThickness = 2,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            Effect = new DropShadowEffect
             {
                 Color = Colors.Black,
                 BlurRadius = 4,
@@ -97,9 +95,28 @@ public partial class ConnectFourBoardControl : UserControl
             }
         };
 
-        cell.Child = ellipse;
-        
-        return cell;
+        var viewbox = new Viewbox
+        {
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = ellipse
+        };
+
+        var viewboxContainer = new Grid();
+        viewboxContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Star) });
+        viewboxContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(8, GridUnitType.Star) });
+        viewboxContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.Children.Add(viewbox);
+        Grid.SetRow(viewbox, 1);
+        Grid.SetColumn(viewbox, 1);
+
+        root.Children.Add(viewboxContainer);
+
+        return (root, ellipse);
     }
 
     private void ColumnButton_Click(object sender, RoutedEventArgs e)
@@ -116,10 +133,9 @@ public partial class ConnectFourBoardControl : UserControl
         {
             if (_isProcessingClick) return;
             _isProcessingClick = true;
-            
-            // Відтворюємо звук кліку
+
             SoundService.Instance.PlayClickSound();
-            
+
             try
             {
                 if (_game == null) return;
@@ -129,14 +145,7 @@ public partial class ConnectFourBoardControl : UserControl
                 if (_game.MakeMove(move))
                 {
                     UpdateBoard();
-                    try
-                    {
-                        _onMoveMade?.Invoke();
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Помилка в _onMoveMade: {ex.Message}");
-                    }
+                    _onMoveMade?.Invoke();
                 }
             }
             finally
@@ -157,48 +166,45 @@ public partial class ConnectFourBoardControl : UserControl
         {
             if (_game?.Board is not ConnectFourBoard board) return;
 
-            foreach (var (position, cell) in _cells)
+            foreach (var (position, ellipse) in _cells)
             {
                 try
                 {
                     var piece = board.GetPiece(position);
-                    var ellipse = cell.Child as System.Windows.Shapes.Ellipse;
-                    
-                    if (ellipse != null)
+
+                    if (piece != null)
                     {
-                        if (piece != null)
+                        var gradient = new RadialGradientBrush();
+                        if (piece.Owner == Player.Player1)
                         {
-                            var gradient = new RadialGradientBrush();
-                            if (piece.Owner == Player.Player1)
-                            {
-                                gradient.GradientStops.Add(new GradientStop(Color.FromRgb(239, 68, 68), 0));
-                                gradient.GradientStops.Add(new GradientStop(Color.FromRgb(220, 38, 38), 1));
-                            }
-                            else
-                            {
-                                gradient.GradientStops.Add(new GradientStop(Color.FromRgb(251, 191, 36), 0));
-                                gradient.GradientStops.Add(new GradientStop(Color.FromRgb(245, 158, 11), 1));
-                            }
-                            ellipse.Fill = gradient;
-                            ellipse.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                            {
-                                Color = Colors.Black,
-                                BlurRadius = 8,
-                                ShadowDepth = 3,
-                                Opacity = 0.5
-                            };
+                            gradient.GradientStops.Add(new GradientStop(Color.FromRgb(239, 68, 68), 0));
+                            gradient.GradientStops.Add(new GradientStop(Color.FromRgb(220, 38, 38), 1));
                         }
                         else
                         {
-                            ellipse.Fill = new SolidColorBrush(Color.FromRgb(241, 245, 249));
-                            ellipse.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                            {
-                                Color = Colors.Black,
-                                BlurRadius = 4,
-                                ShadowDepth = 2,
-                                Opacity = 0.3
-                            };
+                            gradient.GradientStops.Add(new GradientStop(Color.FromRgb(251, 191, 36), 0));
+                            gradient.GradientStops.Add(new GradientStop(Color.FromRgb(245, 158, 11), 1));
                         }
+                        ellipse.Fill = gradient;
+                        ellipse.Effect = new DropShadowEffect
+                        {
+                            Color = Colors.Black,
+                            BlurRadius = 5,
+                            ShadowDepth = 3,
+                            Direction = 315,
+                            Opacity = 0.6
+                        };
+                    }
+                    else
+                    {
+                        ellipse.Fill = new SolidColorBrush(Color.FromRgb(241, 245, 249));
+                        ellipse.Effect = new DropShadowEffect
+                        {
+                            Color = Colors.Black,
+                            BlurRadius = 4,
+                            ShadowDepth = 2,
+                            Opacity = 0.3
+                        };
                     }
                 }
                 catch (Exception ex)
@@ -213,4 +219,3 @@ public partial class ConnectFourBoardControl : UserControl
         }
     }
 }
-

@@ -8,6 +8,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using BoardGamesLibrary.Core;
 using BoardGamesLibrary.Games.Chess;
 using BoardGamesLibrary.Logging;
@@ -20,20 +21,31 @@ public partial class ChessWindow : Window
 {
     private ChessGame? _game;
     private readonly ILogger _logger;
+    private readonly FileLogger _fileLogger;
     private readonly StatisticsService _statisticsService;
+    private readonly bool _playVsAI;
+    private readonly AIDifficulty _aiDifficulty;
+    private ChessAIPlayer? _aiPlayer;
     private int _moveCount = 0;
     private bool _gameResultRecorded = false;
+    private DispatcherTimer? _gameTimer;
+    private DateTime _gameStartTime;
+    private bool _endgameDialogShown = false;
+    private bool _endgameEffectsPlayed = false;
 
-    public ChessWindow()
+    public ChessWindow(bool playVsAI = false, AIDifficulty aiDifficulty = AIDifficulty.Medium)
     {
         InitializeComponent();
+        _playVsAI = playVsAI;
+        _aiDifficulty = aiDifficulty;
         
         var consoleLogger = new ConsoleLogger(LogLevel.Info);
-        var fileLogger = new FileLogger("logs", "chess.log", LogLevel.Debug);
-        _logger = new CompositeLogger(consoleLogger, fileLogger);
+        _fileLogger = new FileLogger("logs", "chess.log", LogLevel.Debug);
+        _logger = new CompositeLogger(consoleLogger, _fileLogger);
         _statisticsService = new StatisticsService();
         
         Loaded += ChessWindow_Loaded;
+        Closed += (s, e) => _fileLogger.Dispose();
     }
     
     private void ChessWindow_Loaded(object sender, RoutedEventArgs e)
@@ -55,11 +67,43 @@ public partial class ChessWindow : Window
     {
         _game = new ChessGame(_logger);
         _game.StartNewGame();
+        _aiPlayer = _playVsAI ? new ChessAIPlayer(Player.Player2, _aiDifficulty, _logger) : null;
         ChessBoard.Initialize(_game, OnMoveMade);
         _moveCount = 0;
         _gameResultRecorded = false;
+        _endgameDialogShown = false;
+        _endgameEffectsPlayed = false;
+        _gameStartTime = DateTime.Now;
+        StartGameTimer();
         
         UpdateUI();
+        TryAIMove();
+    }
+
+    private void StartGameTimer()
+    {
+        _gameTimer?.Stop();
+        _gameTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _gameTimer.Tick += (s, e) => UpdateUI();
+        _gameTimer.Start();
+    }
+
+    private void TryAIMove()
+    {
+        if (_game == null || _aiPlayer == null || _game.IsGameOver() || _game.State != GameState.InProgress)
+            return;
+        if (_game.CurrentPlayer != _aiPlayer.Player)
+            return;
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var move = _aiPlayer.ChooseMove(_game);
+            if (move != null && _game.MakeMove(move))
+            {
+                ChessBoard.UpdateBoard();
+                OnMoveMade();
+            }
+        }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void OnMoveMade()
@@ -83,6 +127,7 @@ public partial class ChessWindow : Window
             }
             
             UpdateUI();
+            TryAIMove();
         }
         catch (Exception ex)
         {
@@ -226,7 +271,25 @@ public partial class ChessWindow : Window
             if (_game == null || Dispatcher.HasShutdownStarted) return;
 
             if (CurrentPlayerText != null)
-                CurrentPlayerText.Text = $"Хід гравця: {_game.CurrentPlayer}";
+                CurrentPlayerText.Text = $"Хід: {GetPlayerDisplayName(_game.CurrentPlayer)}";
+            
+            if (_game.IsGameOver())
+            {
+                _gameTimer?.Stop();
+                HandleGameOverDialog();
+            }
+            if (MoveCountText != null)
+                MoveCountText.Text = $"Ходів: {_moveCount}";
+            if (GameTimeText != null)
+            {
+                var elapsed = DateTime.Now - _gameStartTime;
+                GameTimeText.Text = $"Час: {elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+            }
+            if (MaterialText != null && _game.Board is ChessBoard board)
+            {
+                var (p1, p2) = CountChessPieces(board);
+                MaterialText.Text = $"Г1: {p1} фігур | Г2: {p2} фігур";
+            }
             
             if (StatusText != null)
             {
@@ -235,13 +298,23 @@ public partial class ChessWindow : Window
                     var winner = _game.GetWinner();
                     if (winner.HasValue)
                     {
-                        StatusText.Text = $"Переміг гравець: {winner.Value}!";
-                        AnimateVictory(StatusText);
+                        StatusText.Text = _playVsAI
+                            ? (winner.Value == Player.Player1 ? "Перемога!" : "Поразка!")
+                            : $"Переміг: {GetPlayerDisplayName(winner.Value)}";
+                        if (!_endgameEffectsPlayed)
+                        {
+                            AnimateVictory(StatusText);
+                            _endgameEffectsPlayed = true;
+                        }
                     }
                     else
                     {
                         StatusText.Text = "Нічия!";
-                        AnimateDraw(StatusText);
+                        if (!_endgameEffectsPlayed)
+                        {
+                            AnimateDraw(StatusText);
+                            _endgameEffectsPlayed = true;
+                        }
                     }
                 }
                 else
@@ -260,6 +333,38 @@ public partial class ChessWindow : Window
         catch (Exception ex)
         {
             _logger?.LogError("Помилка в UpdateUIInternal", ex);
+        }
+    }
+
+    private void HandleGameOverDialog()
+    {
+        if (_game == null || _endgameDialogShown)
+            return;
+
+        _endgameDialogShown = true;
+        var winner = _game.GetWinner();
+        var resultText = winner switch
+        {
+            null => "Нічия!",
+            _ when _playVsAI && winner.Value == Player.Player1 => "Перемога!",
+            _ when _playVsAI && winner.Value == Player.Player2 => "Поразка!",
+            _ => $"Переміг: {GetPlayerDisplayName(winner.Value)}"
+        };
+
+        var choice = MessageBox.Show(
+            this,
+            $"{resultText}\n\nЗіграти ще раз?\n\nТак — нова гра\nНі — повернутися в меню",
+            "Гру завершено",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (choice == MessageBoxResult.Yes)
+        {
+            StartNewGame();
+        }
+        else
+        {
+            Close();
         }
     }
 
@@ -327,6 +432,32 @@ public partial class ChessWindow : Window
     {
         if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
             DragMove();
+    }
+
+    private static (int p1, int p2) CountChessPieces(ChessBoard board)
+    {
+        int p1 = 0, p2 = 0;
+        for (int r = 0; r < board.Rows; r++)
+            for (int c = 0; c < board.Columns; c++)
+            {
+                var piece = board.GetPiece(new Position(r, c));
+                if (piece != null)
+                {
+                    if (piece.Owner == Player.Player1) p1++;
+                    else p2++;
+                }
+            }
+        return (p1, p2);
+    }
+
+    private static string GetPlayerDisplayName(Player player)
+    {
+        return player switch
+        {
+            Player.Player1 => "Гравець 1",
+            Player.Player2 => "Гравець 2",
+            _ => "Невідомий гравець"
+        };
     }
 }
 

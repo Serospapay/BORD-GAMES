@@ -42,68 +42,13 @@ public class ReversiAIPlayer : BaseAIPlayer
         if (game is not ReversiGame reversiGame)
             return game;
 
-        // Перевіряємо, чи оригінальна гра в правильному стані для клонування
         if (reversiGame.State != GameState.InProgress)
         {
             _logger?.LogWarning($"Не можна клонувати гру, яка не в стані InProgress (State: {reversiGame.State})");
             return game;
         }
 
-        try
-        {
-            var newGame = new ReversiGame(_logger ?? new ConsoleLogger(LogLevel.Info));
-            var clonedBoard = reversiGame.Board.Clone() as ReversiBoard;
-            if (clonedBoard == null)
-            {
-                _logger?.LogError("Не вдалося клонувати дошку для Reversi");
-                return game;
-            }
-
-            var boardField = typeof(ReversiGame).GetField("Board", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (boardField == null)
-            {
-                _logger?.LogError("Не вдалося знайти поле Board через рефлексію");
-                return game;
-            }
-            boardField.SetValue(newGame, clonedBoard);
-
-            var stateField = typeof(ReversiGame).GetField("State", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var currentPlayerField = typeof(ReversiGame).GetField("CurrentPlayer", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            if (stateField != null && currentPlayerField != null)
-            {
-                // Завжди встановлюємо InProgress для клонованої гри
-                stateField.SetValue(newGame, GameState.InProgress);
-                currentPlayerField.SetValue(newGame, reversiGame.CurrentPlayer);
-                
-                if (newGame.State != GameState.InProgress)
-                {
-                    _logger?.LogWarning($"Клонована гра не в стані InProgress");
-                    return game;
-                }
-                
-                if (newGame.CurrentPlayer != reversiGame.CurrentPlayer)
-                {
-                    _logger?.LogWarning($"Клонована гра має іншого гравця (Expected: {reversiGame.CurrentPlayer}, Actual: {newGame.CurrentPlayer})");
-                    return game;
-                }
-            }
-            else
-            {
-                _logger?.LogWarning("Не вдалося відновити стан гри через рефлексію");
-                return game;
-            }
-
-            return newGame;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError("Помилка при клонуванні гри Reversi", ex);
-            return game;
-        }
+        return reversiGame.Clone();
     }
 
     private IMove? GetBestMoveMinimax(ReversiGame game, int depth)

@@ -33,6 +33,16 @@ public class CheckersGame : IGame
         CurrentPlayer = Player.Player1;
     }
 
+    private CheckersGame(ILogger logger, IBoard board, GameState state, Player currentPlayer)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _errorHandler = new ErrorHandler(_logger);
+        _moveHistory = new List<CheckersMove>();
+        Board = board;
+        State = state;
+        CurrentPlayer = currentPlayer;
+    }
+
     public void StartNewGame()
     {
         _logger.LogInfo("Початок нової гри в шашки");
@@ -187,18 +197,127 @@ public class CheckersGame : IGame
             AddDiagonalMoves(piece, board, -1, moves, false);
         }
 
-        // Стрибки (обов'язкові, якщо можливі)
+        // Стрибки (обов'язкові, якщо можливі) - включаючи множинні стрибки
         if (!piece.IsKing)
         {
-            AddJumpMoves(piece, board, direction, moves);
+            AddJumpMovesRecursive(piece, board, direction, piece.Position, new List<Position>(), moves);
         }
         else
         {
-            AddJumpMoves(piece, board, 1, moves);
-            AddJumpMoves(piece, board, -1, moves);
+            AddJumpMovesRecursive(piece, board, 1, piece.Position, new List<Position>(), moves);
+            AddJumpMovesRecursive(piece, board, -1, piece.Position, new List<Position>(), moves);
         }
 
         return moves;
+    }
+
+    private void AddJumpMovesRecursive(CheckersPiece piece, CheckersBoard board, int rowDirection, Position currentPos, List<Position> capturedSoFar, List<CheckersMove> moves)
+    {
+        var directions = piece.IsKing ? new[] { 1, -1 } : new[] { rowDirection };
+        foreach (var dir in directions)
+        {
+            for (int colOffset = -1; colOffset <= 1; colOffset += 2)
+            {
+                var jumpOverRow = currentPos.Row + dir;
+                var jumpOverCol = currentPos.Column + colOffset;
+                var jumpOverPos = new Position(jumpOverRow, jumpOverCol);
+
+                if (!board.IsValidPosition(jumpOverPos))
+                    continue;
+
+                var jumpOverPiece = board.GetPiece(jumpOverPos);
+                if (jumpOverPiece == null || jumpOverPiece.Owner == piece.Owner)
+                    continue;
+
+                var landRow = jumpOverRow + dir;
+                var landCol = jumpOverCol + colOffset;
+                var landPos = new Position(landRow, landCol);
+
+                if (!board.IsValidPosition(landPos) || !board.IsDarkSquare(landPos))
+                    continue;
+
+                if (board.GetPiece(landPos) != null)
+                    continue;
+
+                var newCaptured = new List<Position>(capturedSoFar) { jumpOverPos };
+                var simulatedBoard = (CheckersBoard)board.Clone();
+                var simulatedPiece = new CheckersPiece(landPos, piece.Owner, piece.IsKing);
+                simulatedBoard.SetPiece(currentPos, null);
+                foreach (var cap in capturedSoFar)
+                    simulatedBoard.SetPiece(cap, null);
+                simulatedBoard.SetPiece(jumpOverPos, null);
+                simulatedBoard.SetPiece(landPos, simulatedPiece);
+
+                var continuations = GetJumpContinuations(simulatedBoard, piece.Owner, piece.IsKing, landPos);
+                if (continuations.Any())
+                {
+                    foreach (var (endPos, extraCaptured) in continuations)
+                    {
+                        var fullCaptured = new List<Position>(newCaptured);
+                        fullCaptured.AddRange(extraCaptured);
+                        var move = new CheckersMove(piece.Position, endPos, piece.Owner) { IsJump = true };
+                        move.CapturedPositions.AddRange(fullCaptured);
+                        if ((piece.Owner == Player.Player1 && endPos.Row == 7) || (piece.Owner == Player.Player2 && endPos.Row == 0))
+                            move.IsPromotion = true;
+                        moves.Add(move);
+                    }
+                }
+                else
+                {
+                    var move = new CheckersMove(piece.Position, landPos, piece.Owner) { IsJump = true };
+                    move.CapturedPositions.AddRange(newCaptured);
+                    if ((piece.Owner == Player.Player1 && landPos.Row == 7) || (piece.Owner == Player.Player2 && landPos.Row == 0))
+                        move.IsPromotion = true;
+                    moves.Add(move);
+                }
+            }
+        }
+    }
+
+    private List<(Position endPos, List<Position> captured)> GetJumpContinuations(CheckersBoard board, Player owner, bool isKing, Position from)
+    {
+        var results = new List<(Position, List<Position>)>();
+        var directions = isKing ? new[] { 1, -1 } : new[] { owner == Player.Player1 ? 1 : -1 };
+
+        foreach (var dir in directions)
+        {
+            for (int colOffset = -1; colOffset <= 1; colOffset += 2)
+            {
+                var jumpOverRow = from.Row + dir;
+                var jumpOverCol = from.Column + colOffset;
+                var jumpOverPos = new Position(jumpOverRow, jumpOverCol);
+                if (!board.IsValidPosition(jumpOverPos)) continue;
+                var jumpOverPiece = board.GetPiece(jumpOverPos);
+                if (jumpOverPiece == null || jumpOverPiece.Owner == owner) continue;
+                var landRow = jumpOverRow + dir;
+                var landCol = jumpOverCol + colOffset;
+                var landPos = new Position(landRow, landCol);
+                if (!board.IsValidPosition(landPos) || !board.IsDarkSquare(landPos)) continue;
+                if (board.GetPiece(landPos) != null) continue;
+
+                var captured = new List<Position> { jumpOverPos };
+                var simBoard = (CheckersBoard)board.Clone();
+                simBoard.SetPiece(from, null);
+                simBoard.SetPiece(jumpOverPos, null);
+                simBoard.SetPiece(landPos, new CheckersPiece(landPos, owner, isKing));
+
+                var next = GetJumpContinuations(simBoard, owner, isKing, landPos);
+                if (next.Any())
+                {
+                    foreach (var (endPos, extra) in next)
+                    {
+                        var full = new List<Position>(captured);
+                        full.AddRange(extra);
+                        results.Add((endPos, full));
+                    }
+                }
+                else
+                {
+                    results.Add((landPos, captured));
+                }
+            }
+        }
+        return results;
     }
 
     private void AddDiagonalMoves(CheckersPiece piece, CheckersBoard board, int rowDirection, List<CheckersMove> moves, bool isJump)
@@ -293,7 +412,9 @@ public class CheckersGame : IGame
         }
 
         var validMoves = GetValidMovesForPiece(piece, board);
-        return validMoves.Any(m => m.From == checkersMove.From && m.To == checkersMove.To);
+        return validMoves.Any(m => m.From == checkersMove.From && m.To == checkersMove.To &&
+            (m.CapturedPositions.Count == checkersMove.CapturedPositions.Count &&
+             m.CapturedPositions.Zip(checkersMove.CapturedPositions, (a, b) => a == b).All(x => x)));
     }
 
     public bool IsGameOver()
@@ -311,6 +432,11 @@ public class CheckersGame : IGame
             GameState.Player2Won => Player.Player2,
             _ => null
         };
+    }
+
+    public IGame Clone()
+    {
+        return new CheckersGame(_logger, Board.Clone(), State, CurrentPlayer);
     }
 
     private void CheckGameState()

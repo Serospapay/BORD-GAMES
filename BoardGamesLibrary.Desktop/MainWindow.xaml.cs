@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file: MainWindow.xaml.cs
  * @description: Головне вікно з меню вибору ігор
  * @dependencies: GameWindows
@@ -6,6 +6,8 @@
  */
 
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Controls;
 using BoardGamesLibrary.Desktop.Services;
 using BoardGamesLibrary.Core;
 
@@ -41,20 +43,15 @@ public partial class MainWindow : Window
     {
         try
         {
-            // Перевіряємо, чи StatsPanel ініціалізований
-            if (StatsPanel == null)
+            var panel = StatsPanel ?? FindName("StatsPanel") as System.Windows.Controls.StackPanel;
+            if (panel == null)
             {
-                System.Diagnostics.Debug.WriteLine("StatsPanel is null! Спробуємо знайти його через FindName...");
-                StatsPanel = FindName("StatsPanel") as System.Windows.Controls.StackPanel;
-                if (StatsPanel == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("StatsPanel все ще null після FindName!");
-                    return;
-                }
+                System.Diagnostics.Debug.WriteLine("StatsPanel не знайдено");
+                return;
             }
 
             var stats = _statisticsService.GetAllStatistics();
-            StatsPanel.Children.Clear();
+            panel.Children.Clear();
             
             System.Diagnostics.Debug.WriteLine($"Завантажено статистику: {stats.TotalGamesPlayed} ігор");
             System.Diagnostics.Debug.WriteLine($"StatsPanel знайдено: {StatsPanel != null}, Children count: {StatsPanel?.Children.Count ?? 0}");
@@ -73,7 +70,7 @@ public partial class MainWindow : Window
                     Margin = new Thickness(0, 0, 0, 20),
                     HorizontalAlignment = HorizontalAlignment.Center
                 };
-                StatsPanel.Children.Add(totalStatsText);
+                panel.Children.Add(totalStatsText);
 
                 // Статистика для кожної гри
                 var gameNames = new[] { "Шахи", "Шашки", "Reversi", "Connect Four" };
@@ -94,7 +91,7 @@ public partial class MainWindow : Window
                             Margin = new Thickness(0, 0, 0, 10),
                             TextWrapping = TextWrapping.Wrap
                         };
-                        StatsPanel.Children.Add(gameStatsText);
+                        panel.Children.Add(gameStatsText);
                     }
                 }
             }
@@ -110,17 +107,17 @@ public partial class MainWindow : Window
                     TextAlignment = TextAlignment.Center,
                     Margin = new Thickness(10)
                 };
-                StatsPanel.Children.Add(noStatsText);
+                panel.Children.Add(noStatsText);
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Помилка оновлення статистики: {ex.Message}\n{ex.StackTrace}");
             
-            // Показуємо повідомлення про помилку
-            if (StatsPanel != null)
+            var errorPanel = StatsPanel ?? FindName("StatsPanel") as System.Windows.Controls.StackPanel;
+            if (errorPanel != null)
             {
-                StatsPanel.Children.Clear();
+                errorPanel.Children.Clear();
                 var errorText = new System.Windows.Controls.TextBlock
                 {
                     Text = $"Помилка завантаження статистики:\n{ex.Message}",
@@ -132,53 +129,74 @@ public partial class MainWindow : Window
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(10)
                 };
-                StatsPanel.Children.Add(errorText);
+                errorPanel.Children.Add(errorText);
             }
         }
     }
 
-    private void ChessButton_Click(object sender, RoutedEventArgs e)
+    private void GameModeButton_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            var chessWindow = new ChessWindow();
-            chessWindow.ShowDialog();
-            UpdateStatistics(); // Оновлюємо статистику після закриття вікна гри
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Помилка відкриття гри: {ex.Message}", 
-                "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+        if (sender is not Button button) return;
 
-    private void CheckersButton_Click(object sender, RoutedEventArgs e)
-    {
+        var modeTag = button.Tag as string;
+        var cardButton = FindTemplatedParent<Button>(button);
+        var gameTag = cardButton?.Tag as string;
+
+        if (string.IsNullOrEmpty(gameTag) || string.IsNullOrEmpty(modeTag))
+            return;
+
+        var (playVsAI, difficulty) = ParseMode(modeTag);
+
         try
         {
-            var checkersWindow = new CheckersWindow();
-            checkersWindow.ShowDialog();
+            switch (gameTag)
+            {
+                case "Chess":
+                    new ChessWindow(playVsAI, difficulty).ShowDialog();
+                    break;
+                case "Checkers":
+                    new CheckersWindow(playVsAI, difficulty).ShowDialog();
+                    break;
+                case "Reversi":
+                    new ReversiWindow(playVsAI, difficulty).ShowDialog();
+                    break;
+                case "ConnectFour":
+                    new ConnectFourWindow(playVsAI, difficulty).ShowDialog();
+                    break;
+                default:
+                    return;
+            }
             UpdateStatistics();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Помилка відкриття гри: {ex.Message}", 
+            MessageBox.Show($"Помилка відкриття гри: {ex.Message}",
                 "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
-    private void ReversiButton_Click(object sender, RoutedEventArgs e)
+    private static T? FindTemplatedParent<T>(DependencyObject child) where T : DependencyObject
     {
-        var reversiWindow = new ReversiWindow();
-        reversiWindow.ShowDialog();
-        UpdateStatistics();
+        var current = child;
+        while (current != null)
+        {
+            if (current is FrameworkElement fe && fe.TemplatedParent is T parent)
+                return parent;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return null;
     }
 
-    private void ConnectFourButton_Click(object sender, RoutedEventArgs e)
+    private static (bool playVsAI, AIDifficulty difficulty) ParseMode(string modeTag)
     {
-        var connectFourWindow = new ConnectFourWindow();
-        connectFourWindow.ShowDialog();
-        UpdateStatistics();
+        return modeTag switch
+        {
+            "2Players" => (false, AIDifficulty.Medium),
+            "AIEasy" => (true, AIDifficulty.Easy),
+            "AIMedium" => (true, AIDifficulty.Medium),
+            "AIHard" => (true, AIDifficulty.Hard),
+            _ => (false, AIDifficulty.Medium)
+        };
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -202,7 +220,7 @@ public partial class MainWindow : Window
     {
         if (SoundToggleButton != null)
         {
-            SoundToggleButton.Content = _soundService.IsEnabled ? "🔊" : "🔇";
+            SoundToggleButton.Content = _soundService.IsEnabled ? "Звук" : "Вимк";
             SoundToggleButton.ToolTip = _soundService.IsEnabled ? "Вимкнути звук" : "Увімкнути звук";
         }
     }

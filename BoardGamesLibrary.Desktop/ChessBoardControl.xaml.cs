@@ -9,6 +9,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
+using System.Windows.Shapes;
 using BoardGamesLibrary.Core;
 using BoardGamesLibrary.Games.Chess;
 using BoardGamesLibrary.Desktop.Services;
@@ -20,8 +22,14 @@ public partial class ChessBoardControl : UserControl
     private ChessGame? _game;
     private Action? _onMoveMade;
     private Position? _selectedPosition;
-    private readonly Dictionary<Position, Border> _cells = new();
+    private (Position From, Position To)? _lastMove;
+    private readonly Dictionary<Position, ChessCellRefs> _cells = new();
     private bool _isProcessingClick = false;
+
+    private static readonly Color SquareLight = Color.FromRgb(255, 255, 221);
+    private static readonly Color SquareDark = Color.FromRgb(118, 150, 86);
+    private static readonly Color SquareSelected = Color.FromRgb(246, 246, 105);
+    private static readonly Color SquareLastMove = Color.FromRgb(205, 210, 106);
 
     public ChessBoardControl()
     {
@@ -33,9 +41,10 @@ public partial class ChessBoardControl : UserControl
         _game = game;
         _onMoveMade = onMoveMade;
         _selectedPosition = null;
+        _lastMove = null;
         _cells.Clear();
         BoardGrid.Children.Clear();
-        
+
         CreateBoard();
         UpdateBoard();
     }
@@ -47,62 +56,111 @@ public partial class ChessBoardControl : UserControl
             for (int col = 0; col < 8; col++)
             {
                 var position = new Position(row, col);
-                var cell = CreateCell(position);
-                _cells[position] = cell;
-                BoardGrid.Children.Add(cell);
+                var refs = CreateCell(position);
+                _cells[position] = refs;
+                BoardGrid.Children.Add(refs.Root);
             }
         }
     }
 
-    private Border CreateCell(Position position)
+    private ChessCellRefs CreateCell(Position position)
     {
         var isLight = (position.Row + position.Column) % 2 == 0;
-        var cell = new Border
-        {
-            Background = new SolidColorBrush(isLight ? Color.FromRgb(238, 238, 210) : Color.FromRgb(118, 150, 86)),
-            BorderBrush = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Cursor = Cursors.Hand,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
-            {
-                Color = Colors.Black,
-                BlurRadius = 2,
-                ShadowDepth = 1,
-                Opacity = 0.1
-            }
-        };
+        var baseColor = isLight ? SquareLight : SquareDark;
 
-        var textBlock = new TextBlock
+        var root = new Grid { Cursor = Cursors.Hand };
+
+        var baseBg = new Border
         {
-            FontSize = 48,
+            Background = new SolidColorBrush(baseColor)
+        };
+        root.Children.Add(baseBg);
+
+        var selectedOverlay = new Border
+        {
+            Background = new SolidColorBrush(SquareSelected),
+            Visibility = Visibility.Collapsed
+        };
+        selectedOverlay.SetValue(Grid.RowProperty, 0);
+        selectedOverlay.SetValue(Grid.ColumnProperty, 0);
+        root.Children.Add(selectedOverlay);
+
+        var lastMoveOverlay = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(120, 205, 210, 106)),
+            Visibility = Visibility.Collapsed
+        };
+        root.Children.Add(lastMoveOverlay);
+
+        var validMoveEllipse = new Ellipse
+        {
+            Width = 25,
+            Height = 25,
+            Fill = new SolidColorBrush(Color.FromArgb(76, 0, 0, 0)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = Visibility.Collapsed
+        };
+        root.Children.Add(validMoveEllipse);
+
+        var hoverOverlay = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(51, 255, 255, 255)),
+            Visibility = Visibility.Collapsed
+        };
+        root.Children.Add(hoverOverlay);
+
+        var pieceText = new TextBlock
+        {
+            FontSize = 72,
             FontWeight = FontWeights.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Name = "PieceText",
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            Effect = new DropShadowEffect
             {
                 Color = Colors.Black,
-                BlurRadius = 3,
-                ShadowDepth = 2,
-                Opacity = 0.5
+                BlurRadius = 5,
+                ShadowDepth = 3,
+                Direction = 315,
+                Opacity = 0.6
             }
         };
 
-        cell.Child = textBlock;
-        cell.MouseLeftButtonDown += (s, e) => OnCellClicked(position);
-        
-        return cell;
+        var viewbox = new Viewbox
+        {
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = pieceText
+        };
+
+        var viewboxContainer = new Grid();
+        viewboxContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8, GridUnitType.Star) });
+        viewboxContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(8, GridUnitType.Star) });
+        viewboxContainer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        viewboxContainer.Children.Add(viewbox);
+        Grid.SetRow(viewbox, 1);
+        Grid.SetColumn(viewbox, 1);
+
+        root.Children.Add(viewboxContainer);
+
+        root.MouseLeftButtonDown += (s, e) => OnCellClicked(position);
+        root.MouseEnter += (s, e) => hoverOverlay.Visibility = Visibility.Visible;
+        root.MouseLeave += (s, e) => hoverOverlay.Visibility = Visibility.Collapsed;
+
+        return new ChessCellRefs(root, baseBg, selectedOverlay, lastMoveOverlay, validMoveEllipse, pieceText, baseColor);
     }
 
     private void OnCellClicked(Position position)
     {
-        // Блокуємо одночасні кліки
         if (_isProcessingClick) return;
         _isProcessingClick = true;
-        
-        // Відтворюємо звук кліку
+
         SoundService.Instance.PlayClickSound();
-        
+
         try
         {
             if (_game == null)
@@ -110,8 +168,14 @@ public partial class ChessBoardControl : UserControl
                 _isProcessingClick = false;
                 return;
             }
-            
+
             if (_game.IsGameOver() || _game.State != GameState.InProgress)
+            {
+                _isProcessingClick = false;
+                return;
+            }
+
+            if (_game.Board is not ChessBoard board)
             {
                 _isProcessingClick = false;
                 return;
@@ -119,22 +183,14 @@ public partial class ChessBoardControl : UserControl
 
             if (_selectedPosition == null)
             {
-                // Вибираємо позицію
-                var board = _game.Board as ChessBoard;
-                if (board == null)
-                {
-                    _isProcessingClick = false;
-                    return;
-                }
-                
                 try
                 {
-                var piece = board.GetPiece(position);
-                if (piece != null && piece.Owner == _game.CurrentPlayer)
-                {
-                    _selectedPosition = position;
-                    HighlightCell(position, true);
-                    HighlightValidMoves(position);
+                    var piece = board.GetPiece(position);
+                    if (piece != null && piece.Owner == _game.CurrentPlayer)
+                    {
+                        _selectedPosition = position;
+                        HighlightCell(position, true);
+                        HighlightValidMoves(position);
                     }
                 }
                 catch (Exception ex)
@@ -144,70 +200,45 @@ public partial class ChessBoardControl : UserControl
             }
             else
             {
-                // Робимо хід
                 if (position == _selectedPosition)
                 {
-                    // Скасовуємо вибір
                     ClearHighlights();
                     _selectedPosition = null;
                 }
                 else
                 {
-                    if (_game == null || _game.IsGameOver() || _game.State != GameState.InProgress)
-                    {
-                        ClearHighlights();
-                        _selectedPosition = null;
-                        _isProcessingClick = false;
-                        return;
-                    }
-                    
                     try
                     {
-                    var move = new ChessMove(_selectedPosition.Value, position, _game.CurrentPlayer);
-                    if (_game.MakeMove(move))
-                    {
-                        ClearHighlights();
-                        _selectedPosition = null;
-                        UpdateBoard();
-                        try
+                        var move = new ChessMove(_selectedPosition.Value, position, _game.CurrentPlayer);
+                        if (_game.MakeMove(move))
                         {
+                            _lastMove = (_selectedPosition.Value, position);
+                            ClearHighlights();
+                            _selectedPosition = null;
+                            UpdateBoard();
                             _onMoveMade?.Invoke();
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Помилка в _onMoveMade: {ex.Message}");
-                        }
-                    }
-                    else
-                    {
-                        // Невірний хід - вибираємо нову позицію
-                        ClearHighlights();
-                        var board = _game.Board as ChessBoard;
-                        if (board != null)
-                            {
-                                try
-                        {
-                            var piece = board.GetPiece(position);
-                            if (piece != null && piece.Owner == _game.CurrentPlayer)
-                            {
-                                _selectedPosition = position;
-                                HighlightCell(position, true);
-                                HighlightValidMoves(position);
-                            }
-                            else
-                                    {
-                                        _selectedPosition = null;
-                                    }
-                                }
-                                catch
-                            {
-                                _selectedPosition = null;
-                            }
                         }
                         else
                         {
-                            _selectedPosition = null;
-                        }
+                            ClearHighlights();
+                            try
+                            {
+                                var piece = board.GetPiece(position);
+                                if (piece != null && piece.Owner == _game.CurrentPlayer)
+                                {
+                                    _selectedPosition = position;
+                                    HighlightCell(position, true);
+                                    HighlightValidMoves(position);
+                                }
+                                else
+                                {
+                                    _selectedPosition = null;
+                                }
+                            }
+                            catch
+                            {
+                                _selectedPosition = null;
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -237,21 +268,18 @@ public partial class ChessBoardControl : UserControl
 
         try
         {
-        var validMoves = _game.GetValidMoves(_game.CurrentPlayer)
-            .OfType<ChessMove>()
+            var validMoves = _game.GetValidMoves(_game.CurrentPlayer)
+                .OfType<ChessMove>()
                 .Where(m => m.From == from)
-                .ToList(); // Materialize to avoid multiple enumerations
+                .ToList();
 
-        foreach (var move in validMoves)
+            foreach (var move in validMoves)
             {
                 try
-        {
-            HighlightCell(move.To, false);
-                }
-                catch
                 {
-                    // Ігноруємо помилки підсвітки окремих клітинок
+                    HighlightCell(move.To, false);
                 }
+                catch { }
             }
         }
         catch (Exception ex)
@@ -262,120 +290,26 @@ public partial class ChessBoardControl : UserControl
 
     private void HighlightCell(Position position, bool isSelected)
     {
-        if (_cells.TryGetValue(position, out var cell))
-        {
-            if (isSelected)
-            {
-                cell.BorderBrush = new SolidColorBrush(Color.FromRgb(251, 191, 36));
-                cell.BorderThickness = new Thickness(4);
-                cell.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                {
-                    Color = Color.FromRgb(251, 191, 36),
-                    BlurRadius = 15,
-                    ShadowDepth = 0,
-                    Opacity = 0.8
-                };
-                
-                // Анімація вибору - плавне збільшення
-                AnimateCellSelection(cell, true);
-            }
-            else
-            {
-                cell.BorderBrush = new SolidColorBrush(Color.FromRgb(34, 197, 94));
-                cell.BorderThickness = new Thickness(3);
-                cell.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                {
-                    Color = Color.FromRgb(34, 197, 94),
-                    BlurRadius = 10,
-                    ShadowDepth = 0,
-                    Opacity = 0.6
-                };
-            }
-        }
-    }
+        if (!_cells.TryGetValue(position, out var refs)) return;
 
-    private void AnimateCellSelection(Border cell, bool isSelected)
-    {
-        // Встановлюємо RenderTransform для анімації
-        if (cell.RenderTransform is not ScaleTransform scaleTransform)
-        {
-            scaleTransform = new ScaleTransform(1.0, 1.0);
-            cell.RenderTransform = scaleTransform;
-            cell.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-        }
-
-        var storyboard = new System.Windows.Media.Animation.Storyboard();
-        
         if (isSelected)
         {
-            // Анімація збільшення при виборі
-            var scaleXAnimation = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.1,
-                Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(200)),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
-            };
-            var scaleYAnimation = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.1,
-                Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(200)),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
-            };
-            
-            System.Windows.Media.Animation.Storyboard.SetTarget(scaleXAnimation, scaleTransform);
-            System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleXAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleXProperty));
-            System.Windows.Media.Animation.Storyboard.SetTarget(scaleYAnimation, scaleTransform);
-            System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleYAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleYProperty));
-            
-            storyboard.Children.Add(scaleXAnimation);
-            storyboard.Children.Add(scaleYAnimation);
+            refs.SelectedOverlay.Visibility = Visibility.Visible;
         }
         else
         {
-            // Анімація повернення до нормального розміру
-            var scaleXAnimation = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.0,
-                Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(150)),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
-            };
-            var scaleYAnimation = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.0,
-                Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(150)),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
-            };
-            
-            System.Windows.Media.Animation.Storyboard.SetTarget(scaleXAnimation, scaleTransform);
-            System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleXAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleXProperty));
-            System.Windows.Media.Animation.Storyboard.SetTarget(scaleYAnimation, scaleTransform);
-            System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleYAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleYProperty));
-            
-            storyboard.Children.Add(scaleXAnimation);
-            storyboard.Children.Add(scaleYAnimation);
+            refs.ValidMoveEllipse.Visibility = Visibility.Visible;
         }
-        
-        storyboard.Begin();
     }
 
     private void ClearHighlights()
     {
-        foreach (var cell in _cells.Values)
+        foreach (var refs in _cells.Values)
         {
-            cell.BorderBrush = Brushes.Transparent;
-            cell.BorderThickness = new Thickness(0);
-            cell.Effect = new System.Windows.Media.Effects.DropShadowEffect
-            {
-                Color = Colors.Black,
-                BlurRadius = 2,
-                ShadowDepth = 1,
-                Opacity = 0.1
-            };
+            refs.SelectedOverlay.Visibility = Visibility.Collapsed;
+            refs.ValidMoveEllipse.Visibility = Visibility.Collapsed;
         }
     }
-
-    private Position? _lastMoveFrom = null;
-    private Position? _lastMoveTo = null;
 
     public void UpdateBoard()
     {
@@ -383,77 +317,61 @@ public partial class ChessBoardControl : UserControl
         {
             if (_game?.Board is not ChessBoard board) return;
 
-            // Зберігаємо інформацію про останній хід для анімації
             var previousState = new Dictionary<Position, string>();
-            foreach (var (pos, cell) in _cells)
+            foreach (var (pos, refs) in _cells)
             {
-                var textBlock = cell.Child as TextBlock;
-                if (textBlock != null)
-                {
-                    previousState[pos] = textBlock.Text ?? "";
-                }
+                previousState[pos] = refs.PieceText.Text ?? "";
             }
 
             ClearHighlights();
             _selectedPosition = null;
 
-            // Знаходимо позиції, де з'явилася або зникла фігура
             Position? newPiecePosition = null;
             Position? removedPiecePosition = null;
 
-            foreach (var (position, cell) in _cells)
+            foreach (var (position, refs) in _cells)
             {
                 try
                 {
                     var piece = board.GetPiece(position);
-                    var textBlock = cell.Child as TextBlock;
-                    
-                    if (textBlock != null)
+                    var oldText = previousState.GetValueOrDefault(position, "");
+                    var newText = piece?.Symbol ?? "";
+
+                    refs.LastMoveOverlay.Visibility = _lastMove.HasValue &&
+                        (position == _lastMove.Value.From || position == _lastMove.Value.To)
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+
+                    if (piece != null)
                     {
-                        var oldText = previousState.GetValueOrDefault(position, "");
-                        var newText = piece?.Symbol ?? "";
+                        refs.PieceText.Text = piece.Symbol;
 
-                        if (piece != null)
+                        var isLight = (position.Row + position.Column) % 2 == 0;
+                        if (piece.Owner == Player.Player1)
                         {
-                            textBlock.Text = piece.Symbol;
-                            
-                            // Визначаємо, чи клітинка світла чи темна
-                            var isLight = (position.Row + position.Column) % 2 == 0;
-                            
-                            // Білі фігури (Player1) завжди світлі, чорні (Player2) завжди темні
-                            // Для контрасту на різних клітинках використовуємо різні відтінки
-                            if (piece.Owner == Player.Player1)
-                            {
-                                // Білі фігури: завжди світлі
-                                textBlock.Foreground = isLight 
-                                    ? new SolidColorBrush(Color.FromRgb(250, 250, 250)) // Білий на світлому бежевому
-                                    : new SolidColorBrush(Color.FromRgb(255, 255, 255)); // Білий на темному зеленому
-                            }
-                            else
-                            {
-                                // Чорні фігури: завжди темні
-                                textBlock.Foreground = isLight 
-                                    ? new SolidColorBrush(Color.FromRgb(10, 10, 10)) // Чорний на світлому бежевому
-                                    : new SolidColorBrush(Color.FromRgb(30, 30, 30)); // Темно-сірий на темному зеленому (трохи світліший для контрасту)
-                            }
-
-                            // Якщо фігура з'явилася на новому місці
-                            if (oldText == "" && newText != "")
-                            {
-                                newPiecePosition = position;
-                                // Анімація появи фігури
-                                AnimatePieceAppearance(textBlock);
-                            }
+                            refs.PieceText.Foreground = isLight
+                                ? new SolidColorBrush(Color.FromRgb(250, 250, 250))
+                                : new SolidColorBrush(Color.FromRgb(255, 255, 255));
                         }
                         else
                         {
-                            textBlock.Text = "";
-                            
-                            // Якщо фігура зникла
-                            if (oldText != "" && newText == "")
-                            {
-                                removedPiecePosition = position;
-                            }
+                            refs.PieceText.Foreground = isLight
+                                ? new SolidColorBrush(Color.FromRgb(10, 10, 10))
+                                : new SolidColorBrush(Color.FromRgb(30, 30, 30));
+                        }
+
+                        if (oldText == "" && newText != "")
+                        {
+                            newPiecePosition = position;
+                            AnimatePieceAppearance(refs.PieceText);
+                        }
+                    }
+                    else
+                    {
+                        refs.PieceText.Text = "";
+                        if (oldText != "" && newText == "")
+                        {
+                            removedPiecePosition = position;
                         }
                     }
                 }
@@ -463,7 +381,6 @@ public partial class ChessBoardControl : UserControl
                 }
             }
 
-            // Анімація руху фігури (якщо є інформація про переміщення)
             if (removedPiecePosition.HasValue && newPiecePosition.HasValue)
             {
                 AnimatePieceMove(removedPiecePosition.Value, newPiecePosition.Value);
@@ -477,21 +394,20 @@ public partial class ChessBoardControl : UserControl
 
     private void AnimatePieceAppearance(TextBlock textBlock)
     {
-        // Анімація появи - плавне збільшення з прозорістю
         var scaleTransform = new ScaleTransform(0.5, 0.5);
         textBlock.RenderTransform = scaleTransform;
         textBlock.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
         textBlock.Opacity = 0;
 
         var storyboard = new System.Windows.Media.Animation.Storyboard();
-        
+
         var scaleXAnimation = new System.Windows.Media.Animation.DoubleAnimation
         {
             From = 0.5,
             To = 1.0,
             Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(300)),
-            EasingFunction = new System.Windows.Media.Animation.ElasticEase 
-            { 
+            EasingFunction = new System.Windows.Media.Animation.ElasticEase
+            {
                 Oscillations = 1,
                 Springiness = 3,
                 EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
@@ -502,8 +418,8 @@ public partial class ChessBoardControl : UserControl
             From = 0.5,
             To = 1.0,
             Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(300)),
-            EasingFunction = new System.Windows.Media.Animation.ElasticEase 
-            { 
+            EasingFunction = new System.Windows.Media.Animation.ElasticEase
+            {
                 Oscillations = 1,
                 Springiness = 3,
                 EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
@@ -531,40 +447,34 @@ public partial class ChessBoardControl : UserControl
 
     private void AnimatePieceMove(Position from, Position to)
     {
-        // Анімація руху - підсвітка клітинок
-        if (_cells.TryGetValue(from, out var fromCell) && _cells.TryGetValue(to, out var toCell))
+        if (_cells.TryGetValue(from, out var fromRefs) && _cells.TryGetValue(to, out var toRefs))
         {
-            // Анімація вихідної клітинки (зникнення)
-            AnimateCellPulse(fromCell, false);
-            
-            // Анімація цільової клітинки (поява)
-            AnimateCellPulse(toCell, true);
+            AnimateCellPulse(fromRefs.BaseBg, false);
+            AnimateCellPulse(toRefs.BaseBg, true);
         }
     }
 
     private void AnimateCellPulse(Border cell, bool isTarget)
     {
-        var originalBrush = cell.Background as SolidColorBrush;
-        if (originalBrush == null) return;
+        if (cell.Background is not SolidColorBrush originalBrush) return;
 
-        var pulseColor = isTarget 
-            ? Color.FromRgb(34, 197, 94) // Зелений для цільової клітинки
-            : Color.FromRgb(251, 191, 36); // Жовтий для вихідної клітинки
+        var pulseColor = isTarget
+            ? Color.FromRgb(34, 197, 94)
+            : Color.FromRgb(251, 191, 36);
 
         var storyboard = new System.Windows.Media.Animation.Storyboard();
-        
-        // Анімація кольору фону
+
         var colorAnimation = new System.Windows.Media.Animation.ColorAnimation
         {
-            From = ((SolidColorBrush)originalBrush).Color,
+            From = originalBrush.Color,
             To = pulseColor,
             Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(200))
         };
-        
+
         var reverseAnimation = new System.Windows.Media.Animation.ColorAnimation
         {
             From = pulseColor,
-            To = ((SolidColorBrush)originalBrush).Color,
+            To = originalBrush.Color,
             Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(200)),
             BeginTime = TimeSpan.FromMilliseconds(200)
         };
@@ -578,5 +488,14 @@ public partial class ChessBoardControl : UserControl
         storyboard.Children.Add(reverseAnimation);
         storyboard.Begin();
     }
-}
 
+    private sealed record ChessCellRefs(
+        Grid Root,
+        Border BaseBg,
+        Border SelectedOverlay,
+        Border LastMoveOverlay,
+        Ellipse ValidMoveEllipse,
+        TextBlock PieceText,
+        Color BaseColor
+    );
+}
