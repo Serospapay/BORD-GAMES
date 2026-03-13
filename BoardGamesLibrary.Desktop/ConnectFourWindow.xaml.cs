@@ -61,7 +61,7 @@ public partial class ConnectFourWindow : Window
         _game = new ConnectFourGame(_logger);
         _game.StartNewGame();
         _aiPlayer = _playVsAI ? new ConnectFourAIPlayer(Player.Player2, _aiDifficulty, _logger) : null;
-        ConnectFourBoard.Initialize(_game, OnMoveMade);
+        ConnectFourBoard.Initialize(_game, OnMoveMade, _playVsAI ? Player.Player1 : null);
         _moveCount = 0;
         _gameResultRecorded = false;
         _endgameDialogShown = false;
@@ -85,10 +85,9 @@ public partial class ConnectFourWindow : Window
         Dispatcher.BeginInvoke(new Action(() =>
         {
             var move = _aiPlayer.ChooseMove(_game);
-            if (move != null && _game.MakeMove(move))
+            if (move is ConnectFourMove connectFourMove)
             {
-                ConnectFourBoard.UpdateBoard();
-                OnMoveMade();
+                _ = ConnectFourBoard.ExecuteMoveWithAnimationAsync(connectFourMove.Column, enforceHumanTurn: false);
             }
         }), System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -198,7 +197,14 @@ public partial class ConnectFourWindow : Window
                 }
                 else
                 {
-                    StatusText.Text = "Гра в процесі";
+                    if (_playVsAI && _game.CurrentPlayer == Player.Player2)
+                    {
+                        StatusText.Text = "Хід AI: обирає колонку...";
+                    }
+                    else
+                    {
+                        StatusText.Text = "Оберіть колонку для ходу";
+                    }
                 }
             }
         }

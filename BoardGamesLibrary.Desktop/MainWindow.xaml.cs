@@ -73,17 +73,23 @@ public partial class MainWindow : Window
                 panel.Children.Add(totalStatsText);
 
                 // Статистика для кожної гри
-                var gameNames = new[] { "Шахи", "Шашки", "Reversi", "Connect Four" };
-                foreach (var gameName in gameNames)
+                var gameLabels = new[]
                 {
-                    var gameStats = stats.GetOrCreateGameStats(gameName);
+                    (Key: "Шахи", Label: "Шахи"),
+                    (Key: "Шашки", Label: "Шашки"),
+                    (Key: "Reversi", Label: "Реверсі"),
+                    (Key: "Connect Four", Label: "Чотири в ряд")
+                };
+                foreach (var game in gameLabels)
+                {
+                    var gameStats = stats.GetOrCreateGameStats(game.Key);
                     if (gameStats.TotalGames > 0)
                     {
                         var gameStatsText = new System.Windows.Controls.TextBlock
                         {
-                            Text = $"{gameName}: {gameStats.TotalGames} ігор | " +
-                                   $"Player1: {gameStats.Player1Wins} ({gameStats.Player1WinRate:F1}%) | " +
-                                   $"Player2: {gameStats.Player2Wins} ({gameStats.Player2WinRate:F1}%) | " +
+                            Text = $"{game.Label}: {gameStats.TotalGames} ігор | " +
+                                   $"Гравець 1: {gameStats.Player1Wins} ({gameStats.Player1WinRate:F1}%) | " +
+                                   $"Гравець 2: {gameStats.Player2Wins} ({gameStats.Player2WinRate:F1}%) | " +
                                    $"Нічиї: {gameStats.Draws}",
                             FontSize = 14,
                             Foreground = new System.Windows.Media.SolidColorBrush(
@@ -220,7 +226,7 @@ public partial class MainWindow : Window
     {
         if (SoundToggleButton != null)
         {
-            SoundToggleButton.Content = _soundService.IsEnabled ? "Звук" : "Вимк";
+            SoundToggleButton.Content = _soundService.IsEnabled ? "Звук: увімк." : "Звук: вимк.";
             SoundToggleButton.ToolTip = _soundService.IsEnabled ? "Вимкнути звук" : "Увімкнути звук";
         }
     }

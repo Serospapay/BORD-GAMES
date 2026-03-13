@@ -83,7 +83,7 @@ public class ReversiAIPlayer : BaseAIPlayer
                     }
                     else
                     {
-                        var score = Minimax(gameCopy, depth - 1, false, int.MinValue, int.MaxValue);
+                        var score = Minimax(gameCopy, depth - 1, int.MinValue, int.MaxValue);
                         if (score > bestScore)
                         {
                             bestScore = score;
@@ -102,20 +102,22 @@ public class ReversiAIPlayer : BaseAIPlayer
         return bestMove ?? GetRandomMove(game);
     }
 
-    private int Minimax(ReversiGame game, int depth, bool maximizingPlayer, int alpha, int beta)
+    private int Minimax(ReversiGame game, int depth, int alpha, int beta)
     {
         if (depth == 0 || game.IsGameOver())
         {
             return EvaluatePosition(game, Player);
         }
 
-        var currentPlayer = maximizingPlayer ? Player : Player.GetOpponent();
+        var currentPlayer = game.CurrentPlayer;
         var validMoves = game.GetValidMoves(currentPlayer).ToList();
 
         if (!validMoves.Any())
         {
             return EvaluatePosition(game, Player);
         }
+
+        bool maximizingPlayer = currentPlayer == Player;
 
         if (maximizingPlayer)
         {
@@ -140,7 +142,7 @@ public class ReversiAIPlayer : BaseAIPlayer
                         }
                         else
                         {
-                            int eval = Minimax(gameCopy, depth - 1, false, alpha, beta);
+                            int eval = Minimax(gameCopy, depth - 1, alpha, beta);
                             maxEval = Math.Max(maxEval, eval);
                             alpha = Math.Max(alpha, eval);
                         }
@@ -179,7 +181,7 @@ public class ReversiAIPlayer : BaseAIPlayer
                         }
                         else
                         {
-                            int eval = Minimax(gameCopy, depth - 1, true, alpha, beta);
+                            int eval = Minimax(gameCopy, depth - 1, alpha, beta);
                             minEval = Math.Min(minEval, eval);
                             beta = Math.Min(beta, eval);
                         }

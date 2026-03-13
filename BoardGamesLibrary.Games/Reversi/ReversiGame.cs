@@ -87,12 +87,19 @@ public class ReversiGame : IGame
                 return false;
             }
 
+            var appliedMove = new ReversiMove(reversiMove.From, reversiMove.Player);
+            if (!FindFlippedPieces(appliedMove, board, CurrentPlayer))
+            {
+                _logger.LogWarning($"Хід не перевертає жодної фігури: {reversiMove.From}");
+                return false;
+            }
+
             // Розміщуємо фігуру
-            var piece = new ReversiPiece(reversiMove.From, CurrentPlayer);
-            board.SetPiece(reversiMove.From, piece);
+            var piece = new ReversiPiece(appliedMove.From, CurrentPlayer);
+            board.SetPiece(appliedMove.From, piece);
 
             // Перевертаємо фігури
-            foreach (var flippedPos in reversiMove.FlippedPositions)
+            foreach (var flippedPos in appliedMove.FlippedPositions)
             {
                 var flippedPiece = board.GetPiece(flippedPos);
                 if (flippedPiece != null)
@@ -103,8 +110,8 @@ public class ReversiGame : IGame
                 }
             }
 
-            _moveHistory.Add(reversiMove);
-            _logger.LogInfo($"Хід виконано: {reversiMove}");
+            _moveHistory.Add(appliedMove);
+            _logger.LogInfo($"Хід виконано: {appliedMove}");
 
             // Перевіряємо стан гри
             CheckGameState();

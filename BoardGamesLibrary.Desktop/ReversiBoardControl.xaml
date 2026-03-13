@@ -6,9 +6,10 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="600">
     <Border x:Name="BoardFrame"
-            Background="{StaticResource BoardFrame}"
-            BorderBrush="{StaticResource BoardFrame}"
+            Background="{StaticResource GameBoardFrameGradient}"
+            BorderBrush="#1E293B"
             BorderThickness="10"
+            CornerRadius="10"
             Padding="0">
         <Border.Effect>
             <DropShadowEffect Color="#000000" BlurRadius="25" ShadowDepth="8" Opacity="0.4"/>

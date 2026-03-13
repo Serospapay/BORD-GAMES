@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BoardGamesLibrary.Desktop"
         mc:Ignorable="d"
-        Title="Бібліотека ігор з дошкою" 
+        Title="Бібліотека настільних ігор" 
         Height="800" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -19,14 +19,15 @@
                            From="0" To="1" Duration="0:0:0.5"/>
         </Storyboard>
         
-        <!-- Стиль міні-кнопки режиму (пігулка: прозорий фон, білий бордер, при hover - білий фон, темний текст) -->
+        <!-- Стиль кнопки режиму на картці -->
         <Style x:Key="HoverOverlayButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="White"/>
+            <Setter Property="Background" Value="#223048"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="Padding" Value="16,9"/>
             <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,5"/>
             <Setter Property="Template">
@@ -42,8 +43,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PillBorder" Property="Background" Value="White"/>
-                                <Setter Property="Foreground" Value="#1A1A24"/>
+                                <Setter TargetName="PillBorder" Property="Background" Value="#3B82F6"/>
+                                <Setter TargetName="PillBorder" Property="BorderBrush" Value="#93C5FD"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="#1D4ED8"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -63,16 +67,22 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="RootBorder"
                                 CornerRadius="15"
+                                BorderBrush="#4C5E82"
+                                BorderThickness="1"
                                 Cursor="Hand">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#2D2B4A" Offset="0"/>
-                                    <GradientStop Color="#3D3A5C" Offset="1"/>
+                                    <GradientStop Color="#2A3148" Offset="0"/>
+                                    <GradientStop Color="#35405E" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
                             <Border.Effect>
                                 <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
                             </Border.Effect>
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
+                            <Border.RenderTransformOrigin>0.5,0.5</Border.RenderTransformOrigin>
                             <Grid>
                                 <!-- ШАР 1: Default View - назва гри (великий жирний текст по центру) -->
                                 <StackPanel x:Name="DefaultView"
@@ -89,19 +99,19 @@
                                             IsHitTestVisible="False"
                                             VerticalAlignment="Center"
                                             HorizontalAlignment="Center">
-                                    <Button Content="2 гравці"
+                                    <Button Content="Двоє гравців"
                                             Tag="2Players"
                                             Style="{StaticResource HoverOverlayButtonStyle}"
                                             Click="GameModeButton_Click"/>
-                                    <Button Content="AI Легко"
+                                    <Button Content="ШІ: легкий"
                                             Tag="AIEasy"
                                             Style="{StaticResource HoverOverlayButtonStyle}"
                                             Click="GameModeButton_Click"/>
-                                    <Button Content="AI Середня"
+                                    <Button Content="ШІ: середній"
                                             Tag="AIMedium"
                                             Style="{StaticResource HoverOverlayButtonStyle}"
                                             Click="GameModeButton_Click"/>
-                                    <Button Content="AI Важка"
+                                    <Button Content="ШІ: складний"
                                             Tag="AIHard"
                                             Style="{StaticResource HoverOverlayButtonStyle}"
                                             Click="GameModeButton_Click"/>
@@ -121,6 +131,14 @@
                                                              Storyboard.TargetProperty="Opacity"
                                                              To="1"
                                                              Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="RootBorder"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1.02"
+                                                             Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="RootBorder"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1.02"
+                                                             Duration="0:0:0.2"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -135,11 +153,20 @@
                                                              Storyboard.TargetProperty="Opacity"
                                                              To="0"
                                                              Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="RootBorder"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1"
+                                                             Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="RootBorder"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1"
+                                                             Duration="0:0:0.2"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                                 <Setter TargetName="DefaultView" Property="IsHitTestVisible" Value="False"/>
                                 <Setter TargetName="HoverMenu" Property="IsHitTestVisible" Value="True"/>
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="#93C5FD"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -179,15 +206,15 @@
                               FontWeight="Bold" 
                               Foreground="White"
                               Margin="0,0,0,5"/>
-                    <TextBlock Text="Класичні настільні ігри з сучасним дизайном" 
+                    <TextBlock Text="Оберіть гру та режим. Усі написи й інтерфейс — українською." 
                               FontSize="16" 
                               Foreground="#E0E7FF"
                               Opacity="0.9"/>
                 </StackPanel>
                 <Button Grid.Column="1" 
                        x:Name="SoundToggleButton"
-                       Content="Звук" 
-                       MinWidth="80"
+                       Content="Звук: увімк." 
+                       MinWidth="120"
                        Padding="12,0"
                        Height="45"
                        FontSize="15"
@@ -221,7 +248,7 @@
                 </Grid.RowDefinitions>
                 
                 <TextBlock Grid.Row="0" 
-                          Text="Оберіть гру для початку" 
+                          Text="Оберіть гру" 
                           FontSize="28" 
                           FontWeight="SemiBold"
                           Foreground="{StaticResource TextPrimary}"
@@ -230,64 +257,44 @@
                 
                 <UniformGrid Grid.Row="1" Columns="2" Rows="2">
                     <Button x:Name="ChessCard"
-                            Content="ШАХИ"
                             Tag="Chess"
                             Style="{StaticResource GameCardStyle}"
                             Margin="20">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
+                        <StackPanel>
+                            <TextBlock Text="ШАХИ" FontSize="25" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Класична стратегія 8x8" FontSize="13" Foreground="#CBD5E1" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Наведіть курсор, щоб обрати режим" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                        </StackPanel>
                     </Button>
                     <Button x:Name="CheckersCard"
-                            Content="ШАШКИ"
                             Tag="Checkers"
                             Style="{StaticResource GameCardStyle}"
                             Margin="20">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
+                        <StackPanel>
+                            <TextBlock Text="ШАШКИ" FontSize="25" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Швидкі тактичні дуелі" FontSize="13" Foreground="#CBD5E1" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Наведіть курсор, щоб обрати режим" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                        </StackPanel>
                     </Button>
                     <Button x:Name="ReversiCard"
-                            Content="REVERSI"
                             Tag="Reversi"
                             Style="{StaticResource GameCardStyle}"
                             Margin="20">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
+                        <StackPanel>
+                            <TextBlock Text="РЕВЕРСІ" FontSize="25" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Контроль ліній та кутів" FontSize="13" Foreground="#CBD5E1" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Наведіть курсор, щоб обрати режим" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                        </StackPanel>
                     </Button>
                     <Button x:Name="ConnectFourCard"
-                            Content="CONNECT FOUR"
                             Tag="ConnectFour"
                             Style="{StaticResource GameCardStyle}"
                             Margin="20">
-                        <Button.ContentTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="White"
-                                           HorizontalAlignment="Center"/>
-                            </DataTemplate>
-                        </Button.ContentTemplate>
+                        <StackPanel>
+                            <TextBlock Text="ЧОТИРИ В РЯД" FontSize="25" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Швидка гра на читання суперника" FontSize="13" Foreground="#CBD5E1" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Наведіть курсор, щоб обрати режим" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+                        </StackPanel>
                     </Button>
                 </UniformGrid>
             </Grid>

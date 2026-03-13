@@ -88,10 +88,11 @@ public partial class ReversiBoardControl : UserControl
         };
         root.Children.Add(hoverOverlay);
 
-        var pieceText = new TextBlock
+        var pieceDisc = new Ellipse
         {
-            FontSize = 72,
-            FontWeight = FontWeights.Bold,
+            Width = 66,
+            Height = 66,
+            StrokeThickness = 2,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Effect = new DropShadowEffect
@@ -104,12 +105,34 @@ public partial class ReversiBoardControl : UserControl
             }
         };
 
+        var pieceShine = new Ellipse
+        {
+            Width = 24,
+            Height = 16,
+            Fill = new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(18, 12, 0, 0),
+            IsHitTestVisible = false
+        };
+
+        var pieceContainer = new Grid
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Width = 72,
+            Height = 72,
+            Visibility = Visibility.Collapsed
+        };
+        pieceContainer.Children.Add(pieceDisc);
+        pieceContainer.Children.Add(pieceShine);
+
         var viewbox = new Viewbox
         {
             Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Child = pieceText
+            Child = pieceContainer
         };
 
         var viewboxContainer = new Grid();
@@ -129,7 +152,7 @@ public partial class ReversiBoardControl : UserControl
         root.MouseEnter += (s, e) => hoverOverlay.Visibility = Visibility.Visible;
         root.MouseLeave += (s, e) => hoverOverlay.Visibility = Visibility.Collapsed;
 
-        return new ReversiCellRefs(root, validMoveEllipse, pieceText);
+        return new ReversiCellRefs(root, validMoveEllipse, pieceContainer, pieceDisc);
     }
 
     private void OnCellClicked(Position position)
@@ -180,26 +203,27 @@ public partial class ReversiBoardControl : UserControl
 
                     if (piece != null)
                     {
-                        refs.PieceText.Text = piece.Symbol;
-
                         if (piece.Owner == Player.Player1)
                         {
-                            refs.PieceText.Foreground = isLight
-                                ? new SolidColorBrush(Color.FromRgb(20, 20, 20))
-                                : new SolidColorBrush(Color.FromRgb(255, 255, 255));
+                            refs.PieceDisc.Fill = new RadialGradientBrush(
+                                Color.FromRgb(36, 40, 47),
+                                Color.FromRgb(2, 6, 23));
+                            refs.PieceDisc.Stroke = new SolidColorBrush(Color.FromRgb(15, 23, 42));
                         }
                         else
                         {
-                            refs.PieceText.Foreground = isLight
-                                ? new SolidColorBrush(Color.FromRgb(255, 255, 255))
-                                : new SolidColorBrush(Color.FromRgb(20, 20, 20));
+                            refs.PieceDisc.Fill = new RadialGradientBrush(
+                                Color.FromRgb(255, 255, 255),
+                                Color.FromRgb(203, 213, 225));
+                            refs.PieceDisc.Stroke = new SolidColorBrush(Color.FromRgb(100, 116, 139));
                         }
 
+                        refs.PieceContainer.Visibility = Visibility.Visible;
                         refs.ValidMoveEllipse.Visibility = Visibility.Collapsed;
                     }
                     else
                     {
-                        refs.PieceText.Text = "";
+                        refs.PieceContainer.Visibility = Visibility.Collapsed;
 
                         var testMove = new ReversiMove(position, _game.CurrentPlayer);
                         refs.ValidMoveEllipse.Visibility = _game.IsValidMove(testMove)
@@ -222,6 +246,7 @@ public partial class ReversiBoardControl : UserControl
     private sealed record ReversiCellRefs(
         Grid Root,
         Ellipse ValidMoveEllipse,
-        TextBlock PieceText
+        Grid PieceContainer,
+        Ellipse PieceDisc
     );
 }

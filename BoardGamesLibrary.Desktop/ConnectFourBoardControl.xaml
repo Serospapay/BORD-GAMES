@@ -5,37 +5,19 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="700">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <UniformGrid x:Name="ColumnButtonsGrid" 
-                     Grid.Row="0" 
-                     Columns="7"
-                     Margin="0,0,0,15">
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="0" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="1" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="2" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="3" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="4" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="5" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-            <Button Content="&#x25BC;" Click="ColumnButton_Click" Tag="6" Style="{StaticResource PrimaryButtonStyle}" Padding="15,10" FontSize="20" Margin="5"/>
-        </UniformGrid>
-        
-        <Border Grid.Row="1"
-                x:Name="BoardFrame"
-                Background="{StaticResource BoardFrame}"
-                BorderBrush="{StaticResource BoardFrame}"
+    <Border x:Name="BoardFrame"
+                Background="{StaticResource GameBoardFrameGradient}"
+                BorderBrush="#1E293B"
                 BorderThickness="10"
                 Padding="10">
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="25" ShadowDepth="8" Opacity="0.4"/>
-            </Border.Effect>
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="25" ShadowDepth="8" Opacity="0.4"/>
+        </Border.Effect>
+        <Grid x:Name="BoardSurfaceGrid">
             <UniformGrid x:Name="BoardGrid" 
                          Rows="6" 
                          Columns="7"/>
-        </Border>
-    </Grid>
+            <Canvas x:Name="AnimationCanvas" IsHitTestVisible="False"/>
+        </Grid>
+    </Border>
 </UserControl>

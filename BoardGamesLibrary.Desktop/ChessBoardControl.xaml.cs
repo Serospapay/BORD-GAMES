@@ -110,28 +110,62 @@ public partial class ChessBoardControl : UserControl
         };
         root.Children.Add(hoverOverlay);
 
-        var pieceText = new TextBlock
+        var pieceDisc = new Ellipse
         {
-            FontSize = 72,
-            FontWeight = FontWeights.Bold,
+            Width = 68,
+            Height = 68,
+            StrokeThickness = 2,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Effect = new DropShadowEffect
             {
                 Color = Colors.Black,
-                BlurRadius = 5,
-                ShadowDepth = 3,
+                BlurRadius = 6,
+                ShadowDepth = 2,
                 Direction = 315,
-                Opacity = 0.6
+                Opacity = 0.45
             }
         };
+
+        var pieceShine = new Ellipse
+        {
+            Width = 22,
+            Height = 14,
+            Fill = new SolidColorBrush(Color.FromArgb(130, 255, 255, 255)),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(18, 12, 0, 0),
+            IsHitTestVisible = false
+        };
+
+        var pieceGlyph = new TextBlock
+        {
+            FontFamily = new FontFamily("Segoe UI Symbol"),
+            FontSize = 46,
+            FontWeight = FontWeights.Bold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false
+        };
+
+        var pieceContainer = new Grid
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Width = 74,
+            Height = 74,
+            Visibility = Visibility.Collapsed
+        };
+        pieceContainer.Children.Add(pieceDisc);
+        pieceContainer.Children.Add(pieceShine);
+        pieceContainer.Children.Add(pieceGlyph);
 
         var viewbox = new Viewbox
         {
             Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Child = pieceText
+            Child = pieceContainer
         };
 
         var viewboxContainer = new Grid();
@@ -151,7 +185,7 @@ public partial class ChessBoardControl : UserControl
         root.MouseEnter += (s, e) => hoverOverlay.Visibility = Visibility.Visible;
         root.MouseLeave += (s, e) => hoverOverlay.Visibility = Visibility.Collapsed;
 
-        return new ChessCellRefs(root, baseBg, selectedOverlay, lastMoveOverlay, validMoveEllipse, pieceText, baseColor);
+        return new ChessCellRefs(root, baseBg, selectedOverlay, lastMoveOverlay, validMoveEllipse, pieceDisc, pieceGlyph, pieceContainer, baseColor);
     }
 
     private void OnCellClicked(Position position)
@@ -320,7 +354,7 @@ public partial class ChessBoardControl : UserControl
             var previousState = new Dictionary<Position, string>();
             foreach (var (pos, refs) in _cells)
             {
-                previousState[pos] = refs.PieceText.Text ?? "";
+                previousState[pos] = refs.PieceGlyph.Text ?? string.Empty;
             }
 
             ClearHighlights();
@@ -334,8 +368,8 @@ public partial class ChessBoardControl : UserControl
                 try
                 {
                     var piece = board.GetPiece(position);
-                    var oldText = previousState.GetValueOrDefault(position, "");
-                    var newText = piece?.Symbol ?? "";
+                    var oldText = previousState.GetValueOrDefault(position, string.Empty);
+                    var newText = piece?.Symbol ?? string.Empty;
 
                     refs.LastMoveOverlay.Visibility = _lastMove.HasValue &&
                         (position == _lastMove.Value.From || position == _lastMove.Value.To)
@@ -344,32 +378,37 @@ public partial class ChessBoardControl : UserControl
 
                     if (piece != null)
                     {
-                        refs.PieceText.Text = piece.Symbol;
+                        refs.PieceGlyph.Text = piece.Symbol;
 
-                        var isLight = (position.Row + position.Column) % 2 == 0;
                         if (piece.Owner == Player.Player1)
                         {
-                            refs.PieceText.Foreground = isLight
-                                ? new SolidColorBrush(Color.FromRgb(250, 250, 250))
-                                : new SolidColorBrush(Color.FromRgb(255, 255, 255));
+                            refs.PieceDisc.Fill = new RadialGradientBrush(
+                                Color.FromRgb(255, 255, 255),
+                                Color.FromRgb(203, 213, 225));
+                            refs.PieceDisc.Stroke = new SolidColorBrush(Color.FromRgb(100, 116, 139));
+                            refs.PieceGlyph.Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42));
                         }
                         else
                         {
-                            refs.PieceText.Foreground = isLight
-                                ? new SolidColorBrush(Color.FromRgb(10, 10, 10))
-                                : new SolidColorBrush(Color.FromRgb(30, 30, 30));
+                            refs.PieceDisc.Fill = new RadialGradientBrush(
+                                Color.FromRgb(51, 65, 85),
+                                Color.FromRgb(2, 6, 23));
+                            refs.PieceDisc.Stroke = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+                            refs.PieceGlyph.Foreground = new SolidColorBrush(Color.FromRgb(248, 250, 252));
                         }
+                        refs.PieceContainer.Visibility = Visibility.Visible;
 
-                        if (oldText == "" && newText != "")
+                        if (oldText == string.Empty && newText != string.Empty)
                         {
                             newPiecePosition = position;
-                            AnimatePieceAppearance(refs.PieceText);
+                            AnimatePieceAppearance(refs.PieceContainer);
                         }
                     }
                     else
                     {
-                        refs.PieceText.Text = "";
-                        if (oldText != "" && newText == "")
+                        refs.PieceGlyph.Text = string.Empty;
+                        refs.PieceContainer.Visibility = Visibility.Collapsed;
+                        if (oldText != string.Empty && newText == string.Empty)
                         {
                             removedPiecePosition = position;
                         }
@@ -392,36 +431,32 @@ public partial class ChessBoardControl : UserControl
         }
     }
 
-    private void AnimatePieceAppearance(TextBlock textBlock)
+    private void AnimatePieceAppearance(UIElement pieceElement)
     {
-        var scaleTransform = new ScaleTransform(0.5, 0.5);
-        textBlock.RenderTransform = scaleTransform;
-        textBlock.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-        textBlock.Opacity = 0;
+        var scaleTransform = new ScaleTransform(0.72, 0.72);
+        pieceElement.RenderTransform = scaleTransform;
+        pieceElement.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+        pieceElement.Opacity = 0;
 
         var storyboard = new System.Windows.Media.Animation.Storyboard();
 
         var scaleXAnimation = new System.Windows.Media.Animation.DoubleAnimation
         {
-            From = 0.5,
+            From = 0.72,
             To = 1.0,
-            Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(300)),
-            EasingFunction = new System.Windows.Media.Animation.ElasticEase
+            Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(220)),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
             {
-                Oscillations = 1,
-                Springiness = 3,
                 EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
             }
         };
         var scaleYAnimation = new System.Windows.Media.Animation.DoubleAnimation
         {
-            From = 0.5,
+            From = 0.72,
             To = 1.0,
-            Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(300)),
-            EasingFunction = new System.Windows.Media.Animation.ElasticEase
+            Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(220)),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
             {
-                Oscillations = 1,
-                Springiness = 3,
                 EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
             }
         };
@@ -429,14 +464,14 @@ public partial class ChessBoardControl : UserControl
         {
             From = 0,
             To = 1,
-            Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(300))
+            Duration = new System.Windows.Duration(TimeSpan.FromMilliseconds(180))
         };
 
         System.Windows.Media.Animation.Storyboard.SetTarget(scaleXAnimation, scaleTransform);
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleXAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleXProperty));
         System.Windows.Media.Animation.Storyboard.SetTarget(scaleYAnimation, scaleTransform);
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleYAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleYProperty));
-        System.Windows.Media.Animation.Storyboard.SetTarget(opacityAnimation, textBlock);
+        System.Windows.Media.Animation.Storyboard.SetTarget(opacityAnimation, pieceElement);
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(opacityAnimation, new System.Windows.PropertyPath(UIElement.OpacityProperty));
 
         storyboard.Children.Add(scaleXAnimation);
@@ -495,7 +530,9 @@ public partial class ChessBoardControl : UserControl
         Border SelectedOverlay,
         Border LastMoveOverlay,
         Ellipse ValidMoveEllipse,
-        TextBlock PieceText,
+        Ellipse PieceDisc,
+        TextBlock PieceGlyph,
+        Grid PieceContainer,
         Color BaseColor
     );
 }

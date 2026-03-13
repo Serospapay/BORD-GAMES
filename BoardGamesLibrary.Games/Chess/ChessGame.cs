@@ -113,6 +113,14 @@ public class ChessGame : IGame
                 return false;
             }
 
+            var validatedMove = ResolveValidatedMove(chessMove, board);
+            if (validatedMove == null)
+            {
+                _logger.LogWarning($"Хід не знайдено серед валідних: {chessMove}");
+                return false;
+            }
+            chessMove = validatedMove;
+
             board.EnPassantTarget = null;
 
             board.MarkPieceMoved(chessMove.From, piece);
@@ -168,6 +176,11 @@ public class ChessGame : IGame
             else
             {
                 chessMove.CapturedPiece = board.GetPiece(chessMove.To) as ChessPiece;
+                if (chessMove.CapturedPiece?.Type == ChessPieceType.King)
+                {
+                    _logger.LogWarning("Захоплення короля заборонене правилами шахів");
+                    return false;
+                }
                 if (chessMove.CapturedPiece is { Type: ChessPieceType.Rook })
                 {
                     board.MarkRookCaptured(chessMove.To, chessMove.CapturedPiece.Owner);
@@ -185,6 +198,11 @@ public class ChessGame : IGame
 
             if (chessMove.IsPromotion && chessMove.PromotionType.HasValue)
             {
+                if (!IsValidPromotionPiece(chessMove.PromotionType.Value))
+                {
+                    _logger.LogWarning($"Некоректний тип промоції: {chessMove.PromotionType.Value}");
+                    return false;
+                }
                 var newPiece = new ChessPiece(chessMove.To, CurrentPlayer, chessMove.PromotionType.Value);
                 board.SetPiece(chessMove.To, newPiece);
             }
@@ -193,12 +211,13 @@ public class ChessGame : IGame
             _logger.LogInfo($"Хід виконано: {chessMove}");
 
             // Перевіряємо стан гри
-            CheckGameState();
+            var nextPlayer = CurrentPlayer.GetOpponent();
+            CheckGameState(nextPlayer);
 
             // Змінюємо гравця тільки якщо гра ще не закінчилася
             if (State == GameState.InProgress)
             {
-                CurrentPlayer = CurrentPlayer.GetOpponent();
+                CurrentPlayer = nextPlayer;
             }
 
             return true;
@@ -222,6 +241,8 @@ public class ChessGame : IGame
                     var moves = GetValidMovesForPiece(piece, board);
                     foreach (var move in moves)
                     {
+                        if (WouldCaptureKing(board, move))
+                            continue;
                         if (!WouldLeaveKingInCheck(board, move, player))
                             validMoves.Add(move);
                     }
@@ -642,6 +663,12 @@ public class ChessGame : IGame
         if (!chessMove.IsValid())
             return false;
 
+        if (State != GameState.InProgress)
+            return false;
+
+        if (chessMove.Player != CurrentPlayer)
+            return false;
+
         var board = Board as ChessBoard;
         if (board == null) return false;
 
@@ -649,8 +676,7 @@ public class ChessGame : IGame
         if (piece == null || piece.Owner != chessMove.Player)
             return false;
 
-        var validMoves = GetValidMoves(chessMove.Player).OfType<ChessMove>();
-        return validMoves.Any(m => m.From == chessMove.From && m.To == chessMove.To);
+        return ResolveValidatedMove(chessMove, board) != null;
     }
 
     public bool IsGameOver()
@@ -675,7 +701,7 @@ public class ChessGame : IGame
         return new ChessGame(_logger, Board.Clone(), State, CurrentPlayer);
     }
 
-    private void CheckGameState()
+    private void CheckGameState(Player sideToMove)
     {
         var board = Board as ChessBoard;
         if (board == null) return;
@@ -702,21 +728,21 @@ public class ChessGame : IGame
         if (!player1KingExists)
         {
             State = GameState.Player2Won;
-            _logger.LogInfo("Гра завершена: Player2 переміг (король Player1 захоплений)");
+            _logger.LogInfo("Гра завершена: Player2 переміг (король Player1 відсутній)");
         }
         else if (!player2KingExists)
         {
             State = GameState.Player1Won;
-            _logger.LogInfo("Гра завершена: Player1 переміг (король Player2 захоплений)");
+            _logger.LogInfo("Гра завершена: Player1 переміг (король Player2 відсутній)");
         }
         else
         {
-            var validMoves = GetValidMoves(CurrentPlayer);
+            var validMoves = GetValidMoves(sideToMove);
             if (!validMoves.Any())
             {
-                if (IsKingInCheck(board, CurrentPlayer))
+                if (IsKingInCheck(board, sideToMove))
                 {
-                    State = CurrentPlayer == Player.Player1 ? GameState.Player2Won : GameState.Player1Won;
+                    State = sideToMove == Player.Player1 ? GameState.Player2Won : GameState.Player1Won;
                     _logger.LogInfo($"Гра завершена: Мат! Переміг {(State == GameState.Player1Won ? "Player1" : "Player2")}");
                 }
                 else
@@ -726,6 +752,31 @@ public class ChessGame : IGame
                 }
             }
         }
+    }
+
+    private ChessMove? ResolveValidatedMove(ChessMove requestedMove, ChessBoard board)
+    {
+        return GetValidMoves(requestedMove.Player)
+            .OfType<ChessMove>()
+            .Where(m => m.From == requestedMove.From && m.To == requestedMove.To)
+            .FirstOrDefault(m => !WouldCaptureKing(board, m));
+    }
+
+    private static bool IsValidPromotionPiece(ChessPieceType pieceType)
+    {
+        return pieceType == ChessPieceType.Queen ||
+               pieceType == ChessPieceType.Rook ||
+               pieceType == ChessPieceType.Bishop ||
+               pieceType == ChessPieceType.Knight;
+    }
+
+    private static bool WouldCaptureKing(ChessBoard board, ChessMove move)
+    {
+        if (move.IsEnPassant)
+            return false;
+
+        var target = board.GetPiece(move.To) as ChessPiece;
+        return target is { Type: ChessPieceType.King } && target.Owner != move.Player;
     }
 }
 

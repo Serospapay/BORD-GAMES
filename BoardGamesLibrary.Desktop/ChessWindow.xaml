@@ -44,15 +44,7 @@
         </Border>
         
         <!-- Ігрова дошка -->
-        <Border Grid.Row="1" 
-                Margin="30"
-                Background="{StaticResource SurfaceColor}"
-                BorderBrush="{StaticResource AccentColor}"
-                BorderThickness="1"
-                CornerRadius="16">
-            <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="4" Opacity="0.3"/>
-            </Border.Effect>
+        <Border Grid.Row="1" Style="{StaticResource GameBoardHostStyle}">
             <local:ChessBoardControl x:Name="ChessBoard" Margin="20"/>
         </Border>
         
@@ -75,9 +67,15 @@
                               Foreground="{StaticResource TextSecondary}"
                               Margin="0,4,0,0"/>
                     <StackPanel x:Name="LiveStatsPanel" Orientation="Horizontal" Margin="0,12,0,0">
-                        <TextBlock x:Name="MoveCountText" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,0,20,0"/>
-                        <TextBlock x:Name="GameTimeText" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,0,20,0"/>
-                        <TextBlock x:Name="MaterialText" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
+                        <Border Style="{StaticResource StatChipStyle}">
+                            <TextBlock x:Name="MoveCountText" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
+                        </Border>
+                        <Border Style="{StaticResource StatChipStyle}">
+                            <TextBlock x:Name="GameTimeText" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
+                        </Border>
+                        <Border Style="{StaticResource StatChipStyle}" Margin="0">
+                            <TextBlock x:Name="MaterialText" FontSize="13" Foreground="{StaticResource TextSecondary}"/>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">

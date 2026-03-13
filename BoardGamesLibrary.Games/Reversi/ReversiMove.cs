@@ -22,6 +22,12 @@ public class ReversiMove : BaseMove
         FlippedPositions = new List<Position>();
     }
 
+    public override bool IsValid()
+    {
+        // У Reversi хід задається однією клітинкою (from == to).
+        return Player.IsValid();
+    }
+
     public override string ToString()
     {
         return $"{Player}: {From} (flipped {FlippedPositions.Count} pieces)";

@@ -128,12 +128,13 @@ public class CheckersGame : IGame
             _logger.LogInfo($"Хід виконано: {checkersMove}");
 
             // Перевіряємо стан гри
-            CheckGameState();
+            var nextPlayer = CurrentPlayer.GetOpponent();
+            CheckGameState(nextPlayer);
 
             // Змінюємо гравця тільки якщо гра ще не закінчилася
             if (State == GameState.InProgress)
             {
-                CurrentPlayer = CurrentPlayer.GetOpponent();
+                CurrentPlayer = nextPlayer;
             }
 
             return true;
@@ -439,7 +440,7 @@ public class CheckersGame : IGame
         return new CheckersGame(_logger, Board.Clone(), State, CurrentPlayer);
     }
 
-    private void CheckGameState()
+    private void CheckGameState(Player sideToMove)
     {
         var board = Board as CheckersBoard;
         if (board == null) return;
@@ -476,11 +477,11 @@ public class CheckersGame : IGame
         else
         {
             // Перевірка на пат (немає валідних ходів)
-            var validMoves = GetValidMoves(CurrentPlayer);
+            var validMoves = GetValidMoves(sideToMove);
             if (!validMoves.Any())
             {
-                State = GameState.Draw;
-                _logger.LogInfo("Гра завершена: Нічия (немає валідних ходів)");
+                State = sideToMove == Player.Player1 ? GameState.Player2Won : GameState.Player1Won;
+                _logger.LogInfo($"Гра завершена: {(State == GameState.Player1Won ? "Player1" : "Player2")} переміг (суперник не має ходів)");
             }
         }
     }

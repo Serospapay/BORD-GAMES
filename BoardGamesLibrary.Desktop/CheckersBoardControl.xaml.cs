@@ -113,13 +113,16 @@ public partial class CheckersBoardControl : UserControl
         };
         root.Children.Add(hoverOverlay);
 
-        TextBlock? pieceText = null;
+        Grid? pieceContainer = null;
+        Ellipse? pieceDisc = null;
+        TextBlock? kingMark = null;
         if (isDark)
         {
-            pieceText = new TextBlock
+            pieceDisc = new Ellipse
             {
-                FontSize = 72,
-                FontWeight = FontWeights.Bold,
+                Width = 66,
+                Height = 66,
+                StrokeThickness = 2,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Effect = new DropShadowEffect
@@ -132,12 +135,35 @@ public partial class CheckersBoardControl : UserControl
                 }
             };
 
+            kingMark = new TextBlock
+            {
+                Text = "K",
+                FontSize = 22,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(255, 215, 64)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Collapsed,
+                IsHitTestVisible = false
+            };
+
+            pieceContainer = new Grid
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Width = 72,
+                Height = 72,
+                Visibility = Visibility.Collapsed
+            };
+            pieceContainer.Children.Add(pieceDisc);
+            pieceContainer.Children.Add(kingMark);
+
             var viewbox = new Viewbox
             {
                 Stretch = Stretch.Uniform,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = pieceText
+                Child = pieceContainer
             };
 
             var viewboxContainer = new Grid();
@@ -159,7 +185,7 @@ public partial class CheckersBoardControl : UserControl
         root.MouseEnter += (s, e) => { if (hoverOverlay != null) hoverOverlay.Visibility = Visibility.Visible; };
         root.MouseLeave += (s, e) => { if (hoverOverlay != null) hoverOverlay.Visibility = Visibility.Collapsed; };
 
-        return new CheckersCellRefs(root, baseBg, selectedOverlay, lastMoveOverlay, validMoveEllipse, pieceText, baseColor, isDark);
+        return new CheckersCellRefs(root, baseBg, selectedOverlay, lastMoveOverlay, validMoveEllipse, pieceContainer, pieceDisc, kingMark, baseColor, isDark);
     }
 
     private void OnCellClicked(Position position)
@@ -329,12 +355,12 @@ public partial class CheckersBoardControl : UserControl
         {
             if (_game?.Board is not CheckersBoard board) return;
 
-            var previousState = new Dictionary<Position, string>();
+            var previousState = new Dictionary<Position, bool>();
             foreach (var (pos, refs) in _cells)
             {
-                if (refs.IsDark && refs.PieceText != null)
+                if (refs.IsDark && refs.PieceContainer != null)
                 {
-                    previousState[pos] = refs.PieceText.Text ?? "";
+                    previousState[pos] = refs.PieceContainer.Visibility == Visibility.Visible;
                 }
             }
 
@@ -353,35 +379,44 @@ public partial class CheckersBoardControl : UserControl
                         ? Visibility.Visible
                         : Visibility.Collapsed;
 
-                    if (refs.IsDark && refs.PieceText != null)
+                    if (refs.IsDark && refs.PieceContainer != null && refs.PieceDisc != null && refs.KingMark != null)
                     {
                         var piece = board.GetPiece(position);
-                        var oldText = previousState.GetValueOrDefault(position, "");
-                        var newText = piece?.Symbol ?? "";
+                        var wasOccupied = previousState.GetValueOrDefault(position, false);
+                        var isOccupied = piece != null;
 
                         if (piece != null)
                         {
-                            refs.PieceText.Text = piece.Symbol;
-
                             if (piece.Owner == Player.Player1)
                             {
-                                refs.PieceText.Foreground = new SolidColorBrush(Color.FromRgb(255, 50, 50));
+                                refs.PieceDisc.Fill = new RadialGradientBrush(
+                                    Color.FromRgb(251, 113, 133),
+                                    Color.FromRgb(190, 24, 93));
+                                refs.PieceDisc.Stroke = new SolidColorBrush(Color.FromRgb(136, 19, 55));
                             }
                             else
                             {
-                                refs.PieceText.Foreground = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+                                refs.PieceDisc.Fill = new RadialGradientBrush(
+                                    Color.FromRgb(248, 250, 252),
+                                    Color.FromRgb(148, 163, 184));
+                                refs.PieceDisc.Stroke = new SolidColorBrush(Color.FromRgb(71, 85, 105));
                             }
+                            refs.KingMark.Visibility = piece is CheckersPiece cp && cp.IsKing
+                                ? Visibility.Visible
+                                : Visibility.Collapsed;
+                            refs.PieceContainer.Visibility = Visibility.Visible;
 
-                            if (oldText == "" && newText != "")
+                            if (!wasOccupied && isOccupied)
                             {
                                 newPiecePosition = position;
-                                AnimatePieceAppearance(refs.PieceText);
+                                AnimatePieceAppearance(refs.PieceContainer);
                             }
                         }
                         else
                         {
-                            refs.PieceText.Text = "";
-                            if (oldText != "" && newText == "")
+                            refs.KingMark.Visibility = Visibility.Collapsed;
+                            refs.PieceContainer.Visibility = Visibility.Collapsed;
+                            if (wasOccupied && !isOccupied)
                             {
                                 removedPiecePosition = position;
                             }
@@ -405,12 +440,12 @@ public partial class CheckersBoardControl : UserControl
         }
     }
 
-    private void AnimatePieceAppearance(TextBlock textBlock)
+    private void AnimatePieceAppearance(UIElement pieceElement)
     {
         var scaleTransform = new ScaleTransform(0.5, 0.5);
-        textBlock.RenderTransform = scaleTransform;
-        textBlock.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
-        textBlock.Opacity = 0;
+        pieceElement.RenderTransform = scaleTransform;
+        pieceElement.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+        pieceElement.Opacity = 0;
 
         var storyboard = new System.Windows.Media.Animation.Storyboard();
 
@@ -449,7 +484,7 @@ public partial class CheckersBoardControl : UserControl
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleXAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleXProperty));
         System.Windows.Media.Animation.Storyboard.SetTarget(scaleYAnimation, scaleTransform);
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(scaleYAnimation, new System.Windows.PropertyPath(ScaleTransform.ScaleYProperty));
-        System.Windows.Media.Animation.Storyboard.SetTarget(opacityAnimation, textBlock);
+        System.Windows.Media.Animation.Storyboard.SetTarget(opacityAnimation, pieceElement);
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(opacityAnimation, new System.Windows.PropertyPath(UIElement.OpacityProperty));
 
         storyboard.Children.Add(scaleXAnimation);
@@ -508,7 +543,9 @@ public partial class CheckersBoardControl : UserControl
         Border SelectedOverlay,
         Border LastMoveOverlay,
         Ellipse ValidMoveEllipse,
-        TextBlock? PieceText,
+        Grid? PieceContainer,
+        Ellipse? PieceDisc,
+        TextBlock? KingMark,
         Color BaseColor,
         bool IsDark
     );

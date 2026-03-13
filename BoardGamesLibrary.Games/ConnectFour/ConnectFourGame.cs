@@ -109,8 +109,11 @@ public class ConnectFourGame : IGame
             // Перевіряємо стан гри
             CheckGameState();
 
-            // Змінюємо гравця
-            CurrentPlayer = CurrentPlayer.GetOpponent();
+            // Змінюємо гравця тільки якщо гра триває
+            if (State == GameState.InProgress)
+            {
+                CurrentPlayer = CurrentPlayer.GetOpponent();
+            }
 
             return true;
         }, false, "Виконання ходу в Connect Four");
@@ -121,6 +124,8 @@ public class ConnectFourGame : IGame
         var validMoves = new List<IMove>();
         var board = Board as ConnectFourBoard;
         if (board == null) return validMoves;
+        if (State != GameState.InProgress) return validMoves;
+        if (player != CurrentPlayer) return validMoves;
 
         for (int col = 0; col < 7; col++)
         {
@@ -140,6 +145,12 @@ public class ConnectFourGame : IGame
             return false;
 
         if (!connectFourMove.IsValid())
+            return false;
+
+        if (State != GameState.InProgress)
+            return false;
+
+        if (connectFourMove.Player != CurrentPlayer)
             return false;
 
         var board = Board as ConnectFourBoard;
